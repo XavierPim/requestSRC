@@ -7,7 +7,7 @@ const HOST = 'localhost';
 
 // Example route using requestSRC.add()
 app.get('/', (req, res) => {
-    requestSRC.add(req, 'default_request'); // Log the request
+    requestSRC.add(req, 'get request'); // Log the request
     res.send('Test server is running with RequestSRC!');
 });
 
