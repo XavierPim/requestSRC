@@ -1,5 +1,4 @@
 const express = require('express');
-const dashboardRoutes = require(`./routes/dashboardRoutes.js`);
 const requestSRC = require('./middleware/requestSRC');
 
 const app = express();
@@ -8,14 +7,13 @@ const HOST = 'localhost';
 
 app.use(express.json()); // Middleware for JSON handling
 
-
-// ✅ Attach dashboard API routes
-app.use(dashboardRoutes);
+//includes all logging & dashboard routes
+app.use(requestSRC.router);
 
 // ✅ Update RequestSRC configuration dynamically
 requestSRC.updateConfig({
     anonymize: true, // Enable anonymization
-    dashboardRoute: "/customDashboard", // Custom dashboard route
+    dashboardRoute: "/custom", // Custom dashboard route
     retentionPeriod: 30, // Keep logs for 30 days
     logFormat: "basic", // Basic logging format
     logUserAgent: false // Don't store User-Agent
@@ -41,4 +39,5 @@ app.get('/log', async (req, res) => {
 
 app.listen(PORT, () => {
     console.log(`Server running at http://${HOST}:${PORT}/`);
+    console.log(`Dashboard available at http://${HOST}:${PORT}${requestSRC.config.dashboardRoute}`);
 });

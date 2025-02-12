@@ -1,25 +1,26 @@
+const express = require('express');
 const axios = require('axios');
 const maxmind = require('maxmind');
 const path = require('path');
-const express = require('express');
-const config = require('../config/config'); 
+const config = require('../config/config');
+const database = require('../config/database');
 const fs = require('fs');
 
 class RequestSRC {
     constructor() {
         this.dbPath = path.join(__dirname, '../data/GeoLite2-City.mmdb');
 
-        // Validate MaxMind DB existence
+        // ✅ Validate MaxMind DB existence
         if (!fs.existsSync(this.dbPath)) {
             console.error("⚠️ MaxMind database not found at:", this.dbPath);
         }
 
-        // Load default configuration
-        this. config = { ...config };
+        // ✅ Load default configuration
+        this.config = { ...config };
 
         this.router = express.Router(); // Middleware router
 
-        // Load MaxMind database for geolocation
+        // ✅ Load MaxMind database for geolocation
         maxmind.open(this.dbPath)
             .then((lookup) => {
                 this.geoLookup = lookup;
@@ -27,24 +28,12 @@ class RequestSRC {
             })
             .catch(err => console.error("Error loading MaxMind DB:", err));
 
-        // ✅ API Route to Modify Configuration (Used by Dashboard)
-        this.router.post('/api/dashboard/options', (req, res) => {
-            try {
-                this.updateConfig(req.body);
-                res.json({ message: "Configuration updated", config: this.config });
-            } catch (error) {
-                res.status(500).json({ error: "Failed to update configuration" });
-            }
-        });
-
-        // ✅ API Route to Get Current Config
-        this.router.get('/api/config', (req, res) => {
-            res.json(this.config);
-        });
+        // ✅ Setup dashboard, logging, and API routes
+        this.setupRoutes();
     }
 
     /**
-     * ✅ Update configuration dynamically.
+     * ✅ Update configuration dynamically & reinitialize routes
      * @param {Object} newConfig - Key-value pairs of settings to update
      */
     updateConfig(newConfig) {
@@ -55,7 +44,11 @@ class RequestSRC {
                 console.warn(`⚠️ Invalid configuration key: ${key}`);
             }
         }
+
         console.log("✅ Updated RequestSRC Config:", this.config);
+
+        // ✅ Reinitialize routes after config update
+        this.setupRoutes();
     }
 
     async getPublicIP() {
@@ -142,6 +135,53 @@ class RequestSRC {
             geo: geoData,
             reqType: reqType
         };
+    }
+
+    /**
+   * ✅ Setup Dashboard, Logging, and API Routes (Supports Dynamic Routes)
+   */
+    setupRoutes() {
+        const dashboardRoute = this.config.dashboardRoute || "/requestSRC";
+
+        // ✅ Remove previously assigned routes to avoid duplication
+        this.router.stack = [];
+
+        // ✅ Serve static files (CSS, JS)
+        this.router.use(express.static(path.join(__dirname, "../public")));
+
+        // ✅ Serve dashboard UI from public/
+        this.router.get(dashboardRoute, (req, res) => {
+            res.sendFile(path.join(__dirname, "../public/requestSRCdashboard.html"));
+        });
+
+        // ✅ API route to fetch logs from PostgreSQL
+        this.router.get(`${dashboardRoute}/logs`, async (req, res) => {
+            try {
+                const result = await database.query("SELECT * FROM logs ORDER BY timestamp DESC LIMIT 100");
+                res.json(result.rows);
+            } catch (err) {
+                console.error("❌ Database error:", err);
+                res.status(500).json({ error: "Database error" });
+            }
+        });
+
+        // ✅ API route to fetch the current config
+        this.router.get(`${dashboardRoute}/config`, (req, res) => {
+            res.json(this.config);
+        });
+
+        // ✅ API route to update settings dynamically
+        this.router.post(`${dashboardRoute}/update-config`, (req, res) => {
+            try {
+                this.updateConfig(req.body);
+                res.json({ message: "Configuration updated", config: this.config });
+            } catch (error) {
+                console.error("❌ Error updating config:", error);
+                res.status(500).json({ error: "Failed to update configuration" });
+            }
+        });
+
+        console.log(`✅ Dashboard now available at: http://localhost:3000${dashboardRoute}`);
     }
 }
 

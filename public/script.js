@@ -77,11 +77,16 @@ async function updateConfig() {
         logUserAgent: document.getElementById("toggleUserAgent").checked
     };
 
-    await fetch("/api/dashboard/options", {
+    const response = await fetch("/dashboard/update-config", { 
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(newConfig)
     });
 
-    alert("Settings updated!");
+    if (response.ok) {
+        alert("Settings updated successfully!");
+    } else {
+        alert("Failed to update settings!");
+    }
 }
+
