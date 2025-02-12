@@ -8,6 +8,7 @@ const HOST = 'localhost';
 
 app.use(express.json()); // Middleware for JSON handling
 
+
 // ✅ Attach dashboard API routes
 app.use(dashboardRoutes);
 
@@ -20,10 +21,6 @@ requestSRC.updateConfig({
     logUserAgent: false // Don't store User-Agent
 });
 
-// ✅ Serve the dashboard dynamically based on config
-app.get(requestSRC.config.dashboardRoute, (req, res) => {
-    res.sendFile(__dirname + "/views/index.html");
-});
 
 // Example route using requestSRC.add()
 app.get('/', (req, res) => {

@@ -1,6 +1,7 @@
 const express = require('express');
 const database = require('../config/database');
 const requestSRC = require('../middleware/requestSRC'); 
+const path = require('path');
 const router = express.Router();
 
 // ✅ Ensure requestSRC is fully initialized before reading config
@@ -9,10 +10,14 @@ const dashboardRoute = requestSRC.config.dashboardRoute || "/requestSRC";
 // ✅ Serve static files (CSS, JS, Images)
 router.use("/public", express.static("public"));
 
-// ✅ Serve dashboard UI dynamically
+// ✅ Serve static files
+router.use(express.static(path.join(__dirname, "../public")));
+
+// ✅ Serve dashboard UI from public/
 router.get(dashboardRoute, (req, res) => {
-    res.sendFile(__dirname + "/../views/index.html");
+    res.sendFile(path.join(__dirname, "../public/index.html"));
 });
+
 
 // ✅ API route to fetch logs from PostgreSQL (with SQL injection protection)
 router.get(`${dashboardRoute}/logs`, async (req, res) => {

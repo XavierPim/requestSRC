@@ -15,7 +15,7 @@ class RequestSRC {
         }
 
         // Load default configuration
-        this.config = { ...config };
+        this. config = { ...config };
 
         this.router = express.Router(); // Middleware router
 
