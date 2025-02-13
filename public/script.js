@@ -1,38 +1,22 @@
+// ✅ Get the base route dynamically & clean it
+let dashboardRoute = window.location.pathname.replace(/\/$/, ""); // Remove trailing slash if any
+
+// ✅ Fetch logs when the dashboard loads
 document.addEventListener("DOMContentLoaded", () => {
     fetchLogs();
     setupToggles();
 });
 
-document.getElementById("toggleView").addEventListener("click", () => {
-    let table = document.getElementById("logTable");
-    let graph = document.getElementById("logChart");
+async function fetchLogs(filters = {}) {
+    let query = new URLSearchParams(filters).toString();
+    let response = await fetch(`${dashboardRoute}/logs?${query}`);
 
-    if (table.style.display !== "none") {
-        table.style.display = "none";
-        graph.style.display = "block";
-        document.getElementById("toggleView").innerText = "📊 Switch to Table";
-        fetchGraphData();
-    } else {
-        table.style.display = "block";
-        graph.style.display = "none";
-        document.getElementById("toggleView").innerText = "📈 Switch to Graph";
-    }
-});
-
-async function fetchLogs() {
-    let dashboardRoute = "/custom"; // Make sure this matches the config
-    console.log(`📌 Fetching logs from: ${dashboardRoute}/logs`);
-
-    let response = await fetch(`${dashboardRoute}/logs`);
-    
     if (!response.ok) {
         console.error("❌ Failed to fetch logs:", response.statusText);
         return;
     }
 
     let data = await response.json();
-    console.log("📌 Received logs:", data); // ✅ Debugging
-
     let tbody = document.querySelector("#logTable tbody");
     tbody.innerHTML = ""; // Clear table before inserting new rows
 
@@ -49,32 +33,21 @@ async function fetchLogs() {
             <td>${log.region || "Unknown"}</td>
             <td>${log.country || "Unknown"}</td>
             <td>${log.user_agent}</td>
-            <td>${log.reqType}</td>
+            <td>${log.req_type}</td>
         </tr>`;
         tbody.innerHTML += row;
     });
-
-    console.log("📌 Table updated with logs.");
 }
 
-// ✅ Fetch logs when the dashboard loads
-document.addEventListener("DOMContentLoaded", async () => {
-    console.log("📌 Dashboard loaded. Fetching logs...");
-    await fetchLogs();
-    setupToggles();
-});
-
-
-
 async function fetchGraphData() {
-    let response = await fetch("/api/logs");
+    let response = await fetch(`${dashboardRoute}/logs`);
     let data = await response.json();
 
     let labels = data.map(log => log.timestamp);
     let requestCounts = {};
 
     data.forEach(log => {
-        requestCounts[log.reqType] = (requestCounts[log.reqType] || 0) + 1;
+        requestCounts[log.req_type] = (requestCounts[log.req_type] || 0) + 1;
     });
 
     let ctx = document.getElementById("logChart").getContext("2d");
@@ -92,7 +65,7 @@ async function fetchGraphData() {
 }
 
 async function setupToggles() {
-    let response = await fetch("/api/config");
+    let response = await fetch(`${dashboardRoute}/config`);
     let config = await response.json();
 
     document.getElementById("toggleAnonymize").checked = config.anonymize;
@@ -105,16 +78,15 @@ async function updateConfig() {
         logUserAgent: document.getElementById("toggleUserAgent").checked
     };
 
-    const response = await fetch("/dashboard/update-config", { 
+    const response = await fetch(`${dashboardRoute}/update-config`, { 
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(newConfig)
     });
 
     if (response.ok) {
-        alert("Settings updated successfully!");
+        alert("✅ Settings updated successfully!");
     } else {
-        alert("Failed to update settings!");
+        alert("❌ Failed to update settings!");
     }
 }
-

@@ -105,7 +105,6 @@ class RequestSRC {
                 "INSERT INTO logs (timestamp, ip, city, region, country, user_agent, req_type) VALUES ($1, $2, $3, $4, $5, $6, $7)",
                 [timestamp, clientIP, geoData.city, geoData.region, geoData.country, req.headers['user-agent'] || "Unknown", reqType]
             );
-            console.log("✅ Log successfully added to database:", { reqType, timestamp });
         } catch (error) {
             console.error("❌ ERROR inserting log:", error);
         }
