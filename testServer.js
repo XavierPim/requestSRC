@@ -22,7 +22,7 @@ requestSRC.updateConfig({
 
 // Example route using requestSRC.add()
 app.get('/', (req, res) => {
-    requestSRC.add(req, 'login'); // Log the request and add to database
+    requestSRC.add(req, 'three'); // Log the request and add to database
     
     //normal code
     res.send('Test server is running with RequestSRC!');

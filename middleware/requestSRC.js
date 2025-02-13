@@ -62,7 +62,6 @@ class RequestSRC {
     }
 
     async add(req, reqType) {
-        console.log("📌 DEBUG: Received reqType:", reqType);  // ✅ Check if reqType is received
 
         if (!reqType) {
             console.error("❌ ERROR: reqType is undefined! Defaulting to 'unknown'.");
@@ -75,7 +74,6 @@ class RequestSRC {
 
         // 🛠 If the client IP is local, replace it with public IP
         if (clientIP === '::1' || clientIP.startsWith('::ffff:') || clientIP.startsWith('192.168.') || clientIP.startsWith('127.')) {
-            console.log('⚠️ Detected local IP. Fetching public IP instead...');
             clientIP = await this.getPublicIP();
         }
 

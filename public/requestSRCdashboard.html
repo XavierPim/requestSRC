@@ -31,22 +31,29 @@
     <table id="logTable">
         <thead>
             <tr>
-                <th>Timestamp</th>
-                <th>IP Address</th>
-                <th>City</th>
-                <th>Region</th>
-                <th>Country</th>
-                <th>User-Agent</th>
-                <th>Type</th>
+                <th onclick="sortTable(0)">Timestamp ⬍</th>
+                <th onclick="sortTable(1)">IP Address ⬍</th>
+                <th onclick="sortTable(2)">City ⬍</th>
+                <th onclick="sortTable(3)">Region ⬍</th>
+                <th onclick="sortTable(4)">Country ⬍</th>
+                <th onclick="sortTable(5)">User-Agent ⬍</th>
+                <th onclick="sortTable(6)">Type ⬍</th>
             </tr>
         </thead>
+        
         <tbody>
             <!-- Log data will be inserted here -->
         </tbody>
     </table>
 
+    <div>
+        <button onclick="prevPage()">⬅️ Previous</button>
+        <button onclick="nextPage()">➡️ Next</button>
+        <span id="currentPageDisplay">Page: 1</span>
+    </div>    
+
     <!-- Graph View (Hidden by Default) -->
-    <canvas id="logChart" style="display:none;"></canvas>
+    <canvas id="logChart" style="display:none; width:100%; max-height:400px;"></canvas>
 
     <script src="./script.js"></script>
 </body>
