@@ -20,23 +20,51 @@ document.getElementById("toggleView").addEventListener("click", () => {
 });
 
 async function fetchLogs() {
-    let response = await fetch("/api/logs");
+    let dashboardRoute = "/custom"; // Make sure this matches the config
+    console.log(`📌 Fetching logs from: ${dashboardRoute}/logs`);
+
+    let response = await fetch(`${dashboardRoute}/logs`);
+    
+    if (!response.ok) {
+        console.error("❌ Failed to fetch logs:", response.statusText);
+        return;
+    }
+
     let data = await response.json();
+    console.log("📌 Received logs:", data); // ✅ Debugging
 
     let tbody = document.querySelector("#logTable tbody");
-    tbody.innerHTML = "";
+    tbody.innerHTML = ""; // Clear table before inserting new rows
+
+    if (data.length === 0) {
+        console.warn("⚠️ No logs available to display.");
+        return;
+    }
 
     data.forEach(log => {
         let row = `<tr>
             <td>${log.timestamp}</td>
             <td>${log.ip}</td>
-            <td>${log.geo.city}, ${log.geo.region}, ${log.geo.country}</td>
+            <td>${log.city || "Unknown"}</td>
+            <td>${log.region || "Unknown"}</td>
+            <td>${log.country || "Unknown"}</td>
             <td>${log.user_agent}</td>
             <td>${log.reqType}</td>
         </tr>`;
         tbody.innerHTML += row;
     });
+
+    console.log("📌 Table updated with logs.");
 }
+
+// ✅ Fetch logs when the dashboard loads
+document.addEventListener("DOMContentLoaded", async () => {
+    console.log("📌 Dashboard loaded. Fetching logs...");
+    await fetchLogs();
+    setupToggles();
+});
+
+
 
 async function fetchGraphData() {
     let response = await fetch("/api/logs");

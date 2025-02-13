@@ -18,7 +18,7 @@ class RequestSRC {
         // ✅ Load default configuration
         this.config = { ...config };
 
-        this.router = express.Router(); // Middleware router
+        this.router = express.Router();
 
         // ✅ Load MaxMind database for geolocation
         maxmind.open(this.dbPath)
@@ -62,6 +62,15 @@ class RequestSRC {
     }
 
     async add(req, reqType) {
+        console.log("📌 DEBUG: Received reqType:", reqType);  // ✅ Check if reqType is received
+
+        if (!reqType) {
+            console.error("❌ ERROR: reqType is undefined! Defaulting to 'unknown'.");
+            reqType = "unknown";  // Prevent undefined values from breaking the database query
+        }
+
+        reqType = String(reqType);  // ✅ Ensure it's always a string
+
         let clientIP = req.headers['x-forwarded-for'] || req.ip;
 
         // 🛠 If the client IP is local, replace it with public IP
@@ -90,14 +99,18 @@ class RequestSRC {
 
         const timestamp = new Date().toISOString();
 
-        console.log(`📌 Request logged: 
-            Client IP=${clientIP}, 
-            Type=${reqType}, 
-            Location=${geoData.city}, ${geoData.region}, ${geoData.country}, 
-            User-Agent=${this.config.logUserAgent ? req.headers['user-agent'] : 'Hidden'}
-            Timestamp=${timestamp}`
-        );
+        // ✅ Store log entry in PostgreSQL
+        try {
+            await database.query(
+                "INSERT INTO logs (timestamp, ip, city, region, country, user_agent, req_type) VALUES ($1, $2, $3, $4, $5, $6, $7)",
+                [timestamp, clientIP, geoData.city, geoData.region, geoData.country, req.headers['user-agent'] || "Unknown", reqType]
+            );
+            console.log("✅ Log successfully added to database:", { reqType, timestamp });
+        } catch (error) {
+            console.error("❌ ERROR inserting log:", error);
+        }
     }
+
 
     async log(req, reqType) {
         let clientIP = req.headers['x-forwarded-for'] || req.ip;
@@ -137,9 +150,11 @@ class RequestSRC {
         };
     }
 
+
+
     /**
-   * ✅ Setup Dashboard, Logging, and API Routes (Supports Dynamic Routes)
-   */
+  * ✅ Setup Dashboard, Logging, and API Routes (Supports Dynamic Routes)
+  */
     setupRoutes() {
         const dashboardRoute = this.config.dashboardRoute || "/requestSRC";
 
@@ -154,16 +169,18 @@ class RequestSRC {
             res.sendFile(path.join(__dirname, "../public/requestSRCdashboard.html"));
         });
 
-        // ✅ API route to fetch logs from PostgreSQL
-        this.router.get(`${dashboardRoute}/logs`, async (req, res) => {
+        // ✅ API to Get Logs (for displaying in the dashboard)
+        this.router.get(`${this.config.dashboardRoute}/logs`, async (req, res) => {
             try {
-                const result = await database.query("SELECT * FROM logs ORDER BY timestamp DESC LIMIT 100");
+                const result = await database.query("SELECT * FROM logs ORDER BY timestamp DESC LIMIT 100"); // Adjust LIMIT as needed
                 res.json(result.rows);
-            } catch (err) {
-                console.error("❌ Database error:", err);
-                res.status(500).json({ error: "Database error" });
+            } catch (error) {
+                console.error("❌ Error fetching logs from database:", error);
+                res.status(500).json({ error: "Failed to retrieve logs" });
             }
         });
+
+
 
         // ✅ API route to fetch the current config
         this.router.get(`${dashboardRoute}/config`, (req, res) => {
@@ -183,6 +200,7 @@ class RequestSRC {
 
         console.log(`✅ Dashboard now available at: http://localhost:3000${dashboardRoute}`);
     }
+
 }
 
 module.exports = new RequestSRC();

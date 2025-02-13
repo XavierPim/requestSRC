@@ -1,12 +1,14 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>RequestSRC Dashboard</title>
-    <link rel="stylesheet" href="../public/style.css">
+    <link rel="stylesheet" href="./requestSRCStyle.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
+
 <body>
     <h1>📊 RequestSRC Dashboard</h1>
 
@@ -31,7 +33,9 @@
             <tr>
                 <th>Timestamp</th>
                 <th>IP Address</th>
-                <th>Location</th>
+                <th>City</th>
+                <th>Region</th>
+                <th>Country</th>
                 <th>User-Agent</th>
                 <th>Type</th>
             </tr>
@@ -44,6 +48,7 @@
     <!-- Graph View (Hidden by Default) -->
     <canvas id="logChart" style="display:none;"></canvas>
 
-    <script src="../public/script.js"></script>
+    <script src="./script.js"></script>
 </body>
+
 </html>
