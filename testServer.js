@@ -26,6 +26,14 @@ app.get('/', (req, res) => {
     res.send('Test server is running with RequestSRC!');
 });
 
+// Example route using requestSRC.add()
+app.get('/other', (req, res) => {
+    requestSRC.add(req, 'well'); // Log the request and add to database
+    
+    //normal code
+    res.send();
+});
+
 // Example route using requestSRC.log()
 app.get('/log', async (req, res) => {
     try {

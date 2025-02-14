@@ -40,23 +40,17 @@ document.getElementById("toggleView").addEventListener("click", () => {
     }
 });
 
-async function fetchLogs(filters = {}) {
-    filters.limit = limit;
-    filters.page = currentPage;
-
-    let query = new URLSearchParams(filters).toString();
-    let response = await fetch(`${dashboardRoute}/logs?${query}`);
-
+// ✅ Fetch logs and update table
+async function fetchLogs() {
+    let response = await fetch(`${dashboardRoute}/logs`);
     if (!response.ok) return;
 
     let data = await response.json();
     let tbody = document.querySelector("#logTable tbody");
-    tbody.innerHTML = "";
-
-    if (data.length === 0) return;
+    tbody.innerHTML = ""; // ✅ Clear old table content
 
     data.forEach(log => {
-        let localTime = convertUTCtoLocal(log.timestamp, false); // ✅ Returns formatted string
+        let localTime = convertUTCtoLocal(log.timestamp, false);
 
         let row = `<tr>
             <td>${localTime}</td> 
@@ -67,107 +61,92 @@ async function fetchLogs(filters = {}) {
             <td>${log.user_agent}</td>
             <td>${log.req_type}</td>
         </tr>`;
-        tbody.innerHTML += row;
+        tbody.innerHTML += row; // ✅ Append new data
     });
 
-    document.getElementById("currentPageDisplay").innerText = `Page: ${currentPage}`;
+    document.getElementById("currentPageDisplay").innerText = `Page: 1`;
 }
 
-async function fetchGraphData(groupBy = "req_type") {
-    let filters = { limit: 1000, page: 1 };
+// ✅ Color palette for assigning colors to request types
+const colorPalette = [
+    "#FF5733", "#33FF57", "#3357FF", "#FF33A1", "#A133FF", "#33FFF5", "#FFC300", "#FF5733",
+    "#C70039", "#900C3F", "#581845", "#28A745", "#17A2B8", "#DC3545", "#FFC107"
+];
+let assignedColors = {}; 
 
-    let query = new URLSearchParams(filters).toString();
-    let response = await fetch(`${dashboardRoute}/logs?${query}`);
+async function fetchGraphData(groupBy = "req_type") {
+    let response = await fetch(`${dashboardRoute}/logs`);
     let data = await response.json();
 
     if (!data || data.length === 0) return;
 
     let groupedData = {};
+    let colorIndex = 0; // ✅ Start from first color
 
     data.forEach(log => {
         let localTimestamp = convertUTCtoLocal(log.timestamp, true);
         if (!localTimestamp) return;
     
         let key = log[groupBy] || "Unknown";
-    
-        // ✅ Round timestamps based on selected time unit
+
         let timeUnit = document.getElementById("timeRange")?.value || "minute"; 
         let timeKey;
     
         if (timeUnit === "minute") {
-            timeKey = localTimestamp.toISOString().slice(0, 16) + ":00.000Z"; // ✅ Round to minute
+            timeKey = localTimestamp.toISOString().slice(0, 16) + ":00.000Z"; 
         } else if (timeUnit === "hour") {
-            timeKey = localTimestamp.toISOString().slice(0, 13) + ":00:00.000Z"; // ✅ Round to hour
+            timeKey = localTimestamp.toISOString().slice(0, 13) + ":00:00.000Z";
         } else if (timeUnit === "day") {
-            timeKey = localTimestamp.toISOString().slice(0, 10) + "T00:00:00.000Z"; // ✅ Round to day
+            timeKey = localTimestamp.toISOString().slice(0, 10) + "T00:00:00.000Z";
         }
     
         if (!groupedData[key]) groupedData[key] = {};
         if (!groupedData[key][timeKey]) groupedData[key][timeKey] = 0;
     
         groupedData[key][timeKey]++;
+
+        // ✅ Assign a fixed color if not already assigned
+        if (!assignedColors[key]) {
+            assignedColors[key] = colorPalette[colorIndex % colorPalette.length]; // Cycle through colors
+            colorIndex++;
+        }
     });
-    
+
     let datasets = Object.keys(groupedData).map(key => ({
         label: key,
         data: Object.entries(groupedData[key])
             .map(([time, count]) => ({ x: new Date(time), y: count }))
             .sort((a, b) => a.x - b.x), 
         fill: false,
-        borderColor: getRandomColor()
+        borderColor: assignedColors[key] // ✅ Use assigned colors
     }));
-    
 
     let canvas = document.getElementById("logChart");
     let ctx = canvas.getContext("2d");
-    
+
     if (window.chartInstance) {
-        window.chartInstance.destroy(); // Destroy previous instance
+        // ✅ Smoothly update the graph instead of resetting it
+        window.chartInstance.data.datasets = datasets;
+        window.chartInstance.update();
+    } else {
+        // ✅ Create the graph only once
+        window.chartInstance = new Chart(ctx, {
+            type: "line",
+            data: { datasets },
+            options: {
+                responsive: true,
+                animation: false, // ✅ Completely disable animations
+                hover: { animationDuration: 0 }, // ✅ Disable hover effects
+                responsiveAnimationDuration: 0, // ✅ Prevent resize animation
+                scales: {
+                    x: { type: "time", time: { unit: "minute" } },
+                    y: { title: { display: true, text: `Count by ${groupBy}` } }
+                }
+            }
+        });
     }
-    
-    window.chartInstance = new Chart(ctx, {
-        type: "line",
-        data: { datasets },
-        options: {
-            responsive: true,
-            scales: {
-                x: {
-                    type: "time",
-                    time: { unit: "minute" },
-                    adapters: { date: Chart._adapters._date }
-                },
-                y: {
-                    title: { display: true, text: `Count by ${groupBy}` }
-                }
-            }
-        }
-    });
-    
-    
-    window.chartInstance = new Chart(ctx, {
-        type: "line",
-        data: { datasets },
-        options: {
-            responsive: true,
-            scales: {
-                x: {
-                    type: "time",
-                    time: { unit: "minute" },
-                    adapters: { date: Chart._adapters._date }
-                },
-                y: {
-                    title: { display: true, text: `Count by ${groupBy}` }
-                }
-            }
-        }
-    });
-    
 }
 
-// ✅ Utility function for random colors
-function getRandomColor() {
-    return `hsl(${Math.floor(Math.random() * 360)}, 100%, 50%)`;
-}
 
 // ✅ Convert UTC timestamp to local time and remove seconds
 function convertUTCtoLocal(utcDateString, forChart = false) {
@@ -250,3 +229,17 @@ function prevPage() {
         fetchLogs();
     }
 }
+
+// ✅ Automatically refresh only the active view every 15 seconds
+setInterval(() => {
+    let table = document.getElementById("logTable");
+    let graph = document.getElementById("logChart");
+
+    if (table.style.display !== "none") {
+        fetchLogs(); // Refresh table
+    } else if (graph.style.display !== "none") {
+        let groupBy = document.getElementById("groupBy").value;
+        fetchGraphData(groupBy); // Refresh graph
+    }
+}, 3000);
+

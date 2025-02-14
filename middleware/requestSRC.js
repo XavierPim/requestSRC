@@ -48,7 +48,7 @@ class RequestSRC {
 
         // ✅ Reinitialize routes after config update
         this.setupRoutes();
-        
+
         //Give user the url of dashboard
         const dashboardRoute = this.config.dashboardRoute || "/requestSRC";
         const serverHost = process.env.HOST || "http://127.0.0.1";
@@ -70,7 +70,7 @@ class RequestSRC {
 
         if (!reqType) {
             console.error("❌ ERROR: reqType is undefined! Defaulting to 'unknown'.");
-            reqType = "unknown"; 
+            reqType = "unknown";
         }
 
         reqType = String(reqType);  // ✅ Ensure it's always a string
@@ -170,17 +170,16 @@ class RequestSRC {
             res.sendFile(path.join(__dirname, "../public/requestSRCdashboard.html"));
         });
 
-        // ✅ API to Get Logs (for displaying in the dashboard)
-        this.router.get(`${this.config.dashboardRoute}/logs`, async (req, res) => {
-            try {
-                const result = await database.query("SELECT * FROM logs ORDER BY timestamp DESC LIMIT 100"); // Adjust LIMIT as needed
-                res.json(result.rows);
-            } catch (error) {
-                console.error("❌ Error fetching logs from database:", error);
-                res.status(500).json({ error: "Failed to retrieve logs" });
-            }
-        });
-
+  // ✅ API to Get Logs (for displaying in the dashboard)
+this.router.get(`${this.config.dashboardRoute}/logs`, async (req, res) => {
+    try {
+        const result = await database.query("SELECT * FROM logs ORDER BY timestamp DESC LIMIT 100"); // Always fetch latest 100 logs
+        res.json(result.rows);
+    } catch (error) {
+        console.error("❌ Error fetching logs from database:", error);
+        res.status(500).json({ error: "Failed to retrieve logs" });
+    }
+});
 
 
         // ✅ API route to fetch the current config
