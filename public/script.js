@@ -1,10 +1,11 @@
 // ✅ Get the base route dynamically & clean it
 let dashboardRoute = window.location.pathname.replace(/\/$/, ""); // Remove trailing slash if any
-//Sorting variables
+
+// Sorting variables
 let currentSortColumn = null;
 let currentSortOrder = "asc";
 
-//Pagination variables
+// Pagination variables
 let currentPage = 1;
 const limit = 100;
 
@@ -17,16 +18,24 @@ document.addEventListener("DOMContentLoaded", () => {
 // ✅ Fetch graph data when switching to graph mode
 document.getElementById("toggleView").addEventListener("click", () => {
     let table = document.getElementById("logTable");
+    let page = document.getElementById("pageButtons");
     let graph = document.getElementById("logChart");
+    let selectMenu = document.getElementById("groupBy");
 
     if (table.style.display !== "none") {
         table.style.display = "none";
+        page.style.display = "none"; // ✅ Fixed typo (was disply)
         graph.style.display = "block";
+        selectMenu.style.display = "block";
         document.getElementById("toggleView").innerText = "📊 Switch to Table";
-        fetchGraphData();  
+
+        // ✅ Refresh graph when toggling
+        fetchGraphData(document.getElementById("groupBy").value);
     } else {
         table.style.display = "block";
+        page.style.display = "block";
         graph.style.display = "none";
+        selectMenu.style.display = "none";
         document.getElementById("toggleView").innerText = "📈 Switch to Graph";
     }
 });
@@ -38,23 +47,19 @@ async function fetchLogs(filters = {}) {
     let query = new URLSearchParams(filters).toString();
     let response = await fetch(`${dashboardRoute}/logs?${query}`);
 
-    if (!response.ok) {
-        console.error("❌ Failed to fetch logs:", response.statusText);
-        return;
-    }
+    if (!response.ok) return;
 
     let data = await response.json();
     let tbody = document.querySelector("#logTable tbody");
-    tbody.innerHTML = ""; // Clear table before inserting new rows
+    tbody.innerHTML = "";
 
-    if (data.length === 0) {
-        console.warn("⚠️ No logs available.");
-        return;
-    }
+    if (data.length === 0) return;
 
     data.forEach(log => {
+        let localTime = convertUTCtoLocal(log.timestamp, false); // ✅ Returns formatted string
+
         let row = `<tr>
-            <td>${log.timestamp}</td>
+            <td>${localTime}</td> 
             <td>${log.ip}</td>
             <td>${log.city || "Unknown"}</td>
             <td>${log.region || "Unknown"}</td>
@@ -68,39 +73,109 @@ async function fetchLogs(filters = {}) {
     document.getElementById("currentPageDisplay").innerText = `Page: ${currentPage}`;
 }
 
-async function fetchGraphData() {
-    let filters = {
-        limit: 100, // ✅ Prevents loading excessive logs
-        page: 1
-    };
+async function fetchGraphData(groupBy = "req_type") {
+    let filters = { limit: 1000, page: 1 };
 
     let query = new URLSearchParams(filters).toString();
     let response = await fetch(`${dashboardRoute}/logs?${query}`);
     let data = await response.json();
 
-    let requestCounts = {};
+    if (!data || data.length === 0) return;
+
+    let groupedData = {};
+
     data.forEach(log => {
-        requestCounts[log.req_type] = (requestCounts[log.req_type] || 0) + 1;
+        let localTimestamp = convertUTCtoLocal(log.timestamp, true);
+        if (!localTimestamp) return;
+    
+        let key = log[groupBy] || "Unknown";
+    
+        // ✅ Round timestamps based on selected time unit
+        let timeUnit = document.getElementById("timeRange")?.value || "minute"; 
+        let timeKey;
+    
+        if (timeUnit === "minute") {
+            timeKey = localTimestamp.toISOString().slice(0, 16) + ":00.000Z"; // ✅ Round to minute
+        } else if (timeUnit === "hour") {
+            timeKey = localTimestamp.toISOString().slice(0, 13) + ":00:00.000Z"; // ✅ Round to hour
+        } else if (timeUnit === "day") {
+            timeKey = localTimestamp.toISOString().slice(0, 10) + "T00:00:00.000Z"; // ✅ Round to day
+        }
+    
+        if (!groupedData[key]) groupedData[key] = {};
+        if (!groupedData[key][timeKey]) groupedData[key][timeKey] = 0;
+    
+        groupedData[key][timeKey]++;
     });
+    
+    let datasets = Object.keys(groupedData).map(key => ({
+        label: key,
+        data: Object.entries(groupedData[key])
+            .map(([time, count]) => ({ x: new Date(time), y: count }))
+            .sort((a, b) => a.x - b.x), 
+        fill: false,
+        borderColor: getRandomColor()
+    }));
+    
 
-    let ctx = document.getElementById("logChart").getContext("2d");
-
-    // ✅ Clear previous chart if it exists
+    let canvas = document.getElementById("logChart");
+    let ctx = canvas.getContext("2d");
+    
+    // ✅ Ensure chart instance is fully reset before rendering
     if (window.chartInstance) {
         window.chartInstance.destroy();
+        document.getElementById("logChart").remove(); // Remove old canvas
+        let newCanvas = document.createElement("canvas");
+        newCanvas.id = "logChart";
+        newCanvas.style = "display:block; width:100%; max-height:400px;";
+        document.body.appendChild(newCanvas); // Re-add canvas to the DOM
+        ctx = newCanvas.getContext("2d"); // Reset context
     }
-
-    // ✅ Store new chart instance globally
+    
     window.chartInstance = new Chart(ctx, {
-        type: "bar",
-        data: {
-            labels: Object.keys(requestCounts),
-            datasets: [{
-                label: "Requests by Type",
-                data: Object.values(requestCounts),
-                backgroundColor: "blue"
-            }]
+        type: "line",
+        data: { datasets },
+        options: {
+            responsive: true,
+            scales: {
+                x: {
+                    type: "time",
+                    time: { unit: "minute" },
+                    adapters: { date: Chart._adapters._date }
+                },
+                y: {
+                    title: { display: true, text: `Count by ${groupBy}` }
+                }
+            }
         }
+    });
+    
+}
+
+// ✅ Utility function for random colors
+function getRandomColor() {
+    return `hsl(${Math.floor(Math.random() * 360)}, 100%, 50%)`;
+}
+
+// ✅ Convert UTC timestamp to local time and remove seconds
+function convertUTCtoLocal(utcDateString, forChart = false) {
+    let utcDate = new Date(utcDateString);
+    if (isNaN(utcDate)) return null; // Prevent invalid dates
+
+    let userOffset = utcDate.getTimezoneOffset() * 60000;
+    let localDate = new Date(utcDate.getTime() - userOffset);
+
+    // ✅ If used for a graph, return a Date object (needed for Chart.js)
+    if (forChart) return localDate;
+
+    // ✅ If used for a table, return a formatted string (MM/DD/YYYY HH:mm AM/PM)
+    return localDate.toLocaleString("en-US", {
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: true
     });
 }
 
@@ -137,7 +212,6 @@ function sortTable(columnIndex) {
     let tbody = table.querySelector("tbody");
     let rows = Array.from(tbody.querySelectorAll("tr"));
 
-    // Determine sort order
     if (currentSortColumn === columnIndex) {
         currentSortOrder = currentSortOrder === "asc" ? "desc" : "asc";
     } else {
@@ -145,26 +219,15 @@ function sortTable(columnIndex) {
     }
     currentSortColumn = columnIndex;
 
-    // Sort rows
     rows.sort((a, b) => {
         let valA = a.cells[columnIndex].innerText.toLowerCase();
         let valB = b.cells[columnIndex].innerText.toLowerCase();
-
-        // Handle numeric sorting (timestamps, IPs)
-        if (!isNaN(valA) && !isNaN(valB)) {
-            return currentSortOrder === "asc" ? valA - valB : valB - valA;
-        }
-
-        return currentSortOrder === "asc"
-            ? valA.localeCompare(valB)
-            : valB.localeCompare(valA);
+        return currentSortOrder === "asc" ? valA.localeCompare(valB) : valB.localeCompare(valA);
     });
 
-    // Reattach sorted rows
     tbody.innerHTML = "";
     rows.forEach(row => tbody.appendChild(row));
 }
-
 
 function nextPage() {
     currentPage++;

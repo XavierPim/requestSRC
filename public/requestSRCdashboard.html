@@ -15,6 +15,28 @@
     <!-- Toggle Table / Graph -->
     <button id="toggleView">📈 Switch to Graph</button>
 
+      <!-- Graph Grouping Options (Initially Hidden) -->
+      <div id="graphOptions" style="display: none; margin-top: 10px;">
+        <label>Group By:</label>
+        <select id="groupBy" onchange="fetchGraphData(this.value)">
+            <option value="req_type">Request Type</option>
+            <option value="ip">IP Address</option>
+            <option value="city">City</option>
+            <option value="region">Region</option>
+            <option value="country">Country</option>
+        </select>
+    </div>
+
+    <label>Time Range:</label>
+    <select id="timeRange" onchange="fetchGraphData(document.getElementById('groupBy').value)">
+        <option value="hour">Last 24 Hours</option>
+        <option value="day">Last 7 Days</option>
+        <option value="week">Last 1 Month</option>
+        <option value="month">Last 3 Months</option>
+        <option value="quarter">Last 6 Months</option>
+    </select>
+</div>
+
     <!-- Settings Panel -->
     <div class="settings">
         <h2>⚙️ Configuration</h2>
@@ -46,16 +68,17 @@
         </tbody>
     </table>
 
-    <div>
+    <!-- Graph View (Hidden by Default) -->
+    <canvas id="logChart" style="display:none; width:100%; max-height:400px;"></canvas>
+    
+    <!-- Pagination controls -->
+    <div id="pageButtons">
         <button onclick="prevPage()">⬅️ Previous</button>
         <button onclick="nextPage()">➡️ Next</button>
         <span id="currentPageDisplay">Page: 1</span>
-    </div>    
-
-    <!-- Graph View (Hidden by Default) -->
-    <canvas id="logChart" style="display:none; width:100%; max-height:400px;"></canvas>
-
+    </div> 
     <script src="./script.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
 </body>
 
 </html>

@@ -22,7 +22,7 @@ requestSRC.updateConfig({
 
 // Example route using requestSRC.add()
 app.get('/', (req, res) => {
-    requestSRC.add(req, 'three'); // Log the request and add to database
+    requestSRC.add(req, 'login'); // Log the request and add to database
     
     //normal code
     res.send('Test server is running with RequestSRC!');
@@ -42,5 +42,5 @@ app.get('/log', async (req, res) => {
 
 
 app.listen(PORT, () => {
-    console.log(`Dashboard available at http://${HOST}:${PORT}${requestSRC.config.dashboardRoute}`);
+    console.log(`Server online`);
 });

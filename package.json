@@ -18,6 +18,7 @@
   "license": "MIT",
   "dependencies": {
     "axios": "^1.7.9",
+    "chartjs-adapter-date-fns": "^3.0.0",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
     "geoip-lite": "^1.4.7",

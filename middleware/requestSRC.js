@@ -41,14 +41,17 @@ class RequestSRC {
             if (this.config.hasOwnProperty(key)) {
                 this.config[key] = newConfig[key];
             } else {
-                console.warn(`⚠️ Invalid configuration key: ${key}`);
+                console.warn(`Invalid configuration key: ${key}`);
             }
         }
 
-        console.log("✅ Updated RequestSRC Config:", this.config);
 
         // ✅ Reinitialize routes after config update
         this.setupRoutes();
+        
+        //Give user the url of dashboard
+        const dashboardRoute = this.config.dashboardRoute || "/requestSRC";
+        console.log(`✅ Dashboard now available at : http://localhost:3000${dashboardRoute}`);
     }
 
     async getPublicIP() {
@@ -114,7 +117,6 @@ class RequestSRC {
 
         // 🛠 If the client IP is local, replace it with public IP
         if (clientIP === '::1' || clientIP.startsWith('::ffff:') || clientIP.startsWith('192.168.') || clientIP.startsWith('127.')) {
-            console.log('⚠️ Detected local IP. Fetching public IP instead...');
             clientIP = await this.getPublicIP();
         }
 
@@ -194,8 +196,6 @@ class RequestSRC {
                 res.status(500).json({ error: "Failed to update configuration" });
             }
         });
-
-        console.log(`✅ Dashboard now available at: http://localhost:3000${dashboardRoute}`);
     }
 
 }
