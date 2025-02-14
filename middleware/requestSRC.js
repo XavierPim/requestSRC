@@ -51,7 +51,9 @@ class RequestSRC {
         
         //Give user the url of dashboard
         const dashboardRoute = this.config.dashboardRoute || "/requestSRC";
-        console.log(`✅ Dashboard now available at : http://localhost:3000${dashboardRoute}`);
+        const serverHost = process.env.HOST || "http://127.0.0.1";
+        const serverPort = process.env.PORT || 3000;
+        console.log(`✅ Dashboard now available at: ${serverHost}:${serverPort}${dashboardRoute}`);
     }
 
     async getPublicIP() {
@@ -68,7 +70,7 @@ class RequestSRC {
 
         if (!reqType) {
             console.error("❌ ERROR: reqType is undefined! Defaulting to 'unknown'.");
-            reqType = "unknown";  // Prevent undefined values from breaking the database query
+            reqType = "unknown"; 
         }
 
         reqType = String(reqType);  // ✅ Ensure it's always a string
@@ -142,7 +144,7 @@ class RequestSRC {
 
         return {
             ip: clientIP,
-            user_agent: this.config.logUserAgent ? req.headers['user-agent'] : 'Hidden',
+            user_agent: req.headers['user-agent'] || "Unknown",
             timestamp: timestamp,
             geo: geoData,
             reqType: reqType

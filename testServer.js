@@ -15,8 +15,6 @@ requestSRC.updateConfig({
     anonymize: true, // Enable anonymization
     dashboardRoute: "/custom", // Custom dashboard route
     retentionPeriod: 30, // Keep logs for 30 days
-    logFormat: "basic", // Basic logging format
-    logUserAgent: false // Don't store User-Agent
 });
 
 

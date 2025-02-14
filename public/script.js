@@ -24,7 +24,7 @@ document.getElementById("toggleView").addEventListener("click", () => {
 
     if (table.style.display !== "none") {
         table.style.display = "none";
-        page.style.display = "none"; // ✅ Fixed typo (was disply)
+        page.style.display = "none"; 
         graph.style.display = "block";
         selectMenu.style.display = "block";
         document.getElementById("toggleView").innerText = "📊 Switch to Table";
@@ -121,16 +121,28 @@ async function fetchGraphData(groupBy = "req_type") {
     let canvas = document.getElementById("logChart");
     let ctx = canvas.getContext("2d");
     
-    // ✅ Ensure chart instance is fully reset before rendering
     if (window.chartInstance) {
-        window.chartInstance.destroy();
-        document.getElementById("logChart").remove(); // Remove old canvas
-        let newCanvas = document.createElement("canvas");
-        newCanvas.id = "logChart";
-        newCanvas.style = "display:block; width:100%; max-height:400px;";
-        document.body.appendChild(newCanvas); // Re-add canvas to the DOM
-        ctx = newCanvas.getContext("2d"); // Reset context
+        window.chartInstance.destroy(); // Destroy previous instance
     }
+    
+    window.chartInstance = new Chart(ctx, {
+        type: "line",
+        data: { datasets },
+        options: {
+            responsive: true,
+            scales: {
+                x: {
+                    type: "time",
+                    time: { unit: "minute" },
+                    adapters: { date: Chart._adapters._date }
+                },
+                y: {
+                    title: { display: true, text: `Count by ${groupBy}` }
+                }
+            }
+        }
+    });
+    
     
     window.chartInstance = new Chart(ctx, {
         type: "line",
@@ -185,13 +197,11 @@ async function setupToggles() {
     let config = await response.json();
 
     document.getElementById("toggleAnonymize").checked = config.anonymize;
-    document.getElementById("toggleUserAgent").checked = config.logUserAgent;
 }
 
 async function updateConfig() {
     let newConfig = {
         anonymize: document.getElementById("toggleAnonymize").checked,
-        logUserAgent: document.getElementById("toggleUserAgent").checked
     };
 
     const response = await fetch(`${dashboardRoute}/update-config`, { 
