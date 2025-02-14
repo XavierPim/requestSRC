@@ -40,14 +40,18 @@ document.getElementById("toggleView").addEventListener("click", () => {
     }
 });
 
-// ✅ Fetch logs and update table
+// ✅ Fetch logs and respect pagination
 async function fetchLogs() {
-    let response = await fetch(`${dashboardRoute}/logs`);
+    let filters = { limit, page: currentPage }; // ✅ Keep pagination state
+
+    let query = new URLSearchParams(filters).toString();
+    let response = await fetch(`${dashboardRoute}/logs?${query}`);
+    
     if (!response.ok) return;
 
     let data = await response.json();
     let tbody = document.querySelector("#logTable tbody");
-    tbody.innerHTML = ""; // ✅ Clear old table content
+    tbody.innerHTML = ""; // ✅ Clear only current page data
 
     data.forEach(log => {
         let localTime = convertUTCtoLocal(log.timestamp, false);
@@ -61,11 +65,12 @@ async function fetchLogs() {
             <td>${log.user_agent}</td>
             <td>${log.req_type}</td>
         </tr>`;
-        tbody.innerHTML += row; // ✅ Append new data
+        tbody.innerHTML += row; // ✅ Append new page data
     });
 
-    document.getElementById("currentPageDisplay").innerText = `Page: 1`;
+    document.getElementById("currentPageDisplay").innerText = `Page: ${currentPage}`;
 }
+
 
 // ✅ Color palette for assigning colors to request types
 const colorPalette = [
