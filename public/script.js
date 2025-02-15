@@ -11,9 +11,15 @@ const limit = 100;
 
 // ✅ Fetch logs when the dashboard loads
 document.addEventListener("DOMContentLoaded", () => {
+    currentSortColumn = localStorage.getItem("sortColumn") 
+        ? parseInt(localStorage.getItem("sortColumn")) 
+        : null;
+    currentSortOrder = localStorage.getItem("sortOrder") || "asc";
+
     fetchLogs();
     setupToggles();
 });
+
 
 // ✅ Fetch graph data when switching to graph mode
 document.getElementById("toggleView").addEventListener("click", () => {
@@ -40,9 +46,13 @@ document.getElementById("toggleView").addEventListener("click", () => {
     }
 });
 
-// ✅ Fetch logs and respect pagination
 async function fetchLogs() {
-    let filters = { limit, page: currentPage }; // ✅ Keep pagination state
+    let filters = { 
+        limit, 
+        page: currentPage, 
+        sortColumn: localStorage.getItem("sortColumn") || null,
+        sortOrder: localStorage.getItem("sortOrder") || "asc"
+    };
 
     let query = new URLSearchParams(filters).toString();
     let response = await fetch(`${dashboardRoute}/logs?${query}`);
@@ -52,6 +62,36 @@ async function fetchLogs() {
     let data = await response.json();
     let tbody = document.querySelector("#logTable tbody");
     tbody.innerHTML = ""; // ✅ Clear only current page data
+
+    // ✅ Apply sorting before rendering
+    if (filters.sortColumn !== null) {
+        let columnIndex = parseInt(filters.sortColumn);
+        let sortOrder = filters.sortOrder;
+
+        data.sort((a, b) => {
+            let valA = a[Object.keys(a)[columnIndex]];
+            let valB = b[Object.keys(b)[columnIndex]];
+        
+            // ✅ Handle missing values
+            if (valA === undefined || valA === null) valA = "";
+            if (valB === undefined || valB === null) valB = "";
+        
+            // ✅ Check if values are numbers
+            let numA = parseFloat(valA);
+            let numB = parseFloat(valB);
+        
+            if (!isNaN(numA) && !isNaN(numB)) { 
+                return sortOrder === "asc" ? numA - numB : numB - numA;
+            }
+        
+            // ✅ Convert to string for localeCompare()
+            valA = String(valA).toLowerCase();
+            valB = String(valB).toLowerCase();
+        
+            return sortOrder === "asc" ? valA.localeCompare(valB) : valB.localeCompare(valA);
+        });
+        updateSortIcons();
+    }
 
     data.forEach(log => {
         let localTime = convertUTCtoLocal(log.timestamp, false);
@@ -70,6 +110,7 @@ async function fetchLogs() {
 
     document.getElementById("currentPageDisplay").innerText = `Page: ${currentPage}`;
 }
+
 
 
 // ✅ Color palette for assigning colors to request types
@@ -202,10 +243,6 @@ async function updateConfig() {
 }
 
 function sortTable(columnIndex) {
-    let table = document.getElementById("logTable");
-    let tbody = table.querySelector("tbody");
-    let rows = Array.from(tbody.querySelectorAll("tr"));
-
     if (currentSortColumn === columnIndex) {
         currentSortOrder = currentSortOrder === "asc" ? "desc" : "asc";
     } else {
@@ -213,15 +250,13 @@ function sortTable(columnIndex) {
     }
     currentSortColumn = columnIndex;
 
-    rows.sort((a, b) => {
-        let valA = a.cells[columnIndex].innerText.toLowerCase();
-        let valB = b.cells[columnIndex].innerText.toLowerCase();
-        return currentSortOrder === "asc" ? valA.localeCompare(valB) : valB.localeCompare(valA);
-    });
+    // ✅ Save sorting state in localStorage
+    localStorage.setItem("sortColumn", columnIndex);
+    localStorage.setItem("sortOrder", currentSortOrder);
 
-    tbody.innerHTML = "";
-    rows.forEach(row => tbody.appendChild(row));
+    fetchLogs(); // ✅ Fetch logs again with sorting applied
 }
+
 
 function nextPage() {
     currentPage++;
@@ -235,16 +270,32 @@ function prevPage() {
     }
 }
 
+function updateSortIcons() {
+    for (let i = 0; i < 7; i++) {
+        let icon = document.getElementById(`sortIcon${i}`);
+        if (icon) icon.innerText = "⬍"; // Reset all to default
+    }
+
+    if (currentSortColumn !== null) {
+        let icon = document.getElementById(`sortIcon${currentSortColumn}`);
+        if (icon) {
+            icon.innerText = currentSortOrder === "asc" ? "⬆️" : "⬇️";
+        }
+    }
+}
+
+
 // ✅ Automatically refresh only the active view every 15 seconds
 setInterval(() => {
     let table = document.getElementById("logTable");
     let graph = document.getElementById("logChart");
 
     if (table.style.display !== "none") {
-        fetchLogs(); // Refresh table
+        fetchLogs(); // ✅ Refresh table while keeping sorting
     } else if (graph.style.display !== "none") {
         let groupBy = document.getElementById("groupBy").value;
-        fetchGraphData(groupBy); // Refresh graph
+        fetchGraphData(groupBy); // ✅ Refresh graph only when visible
     }
-}, 3000);
+}, 5000); // 🔄 Increased to 5 seconds to reduce API strain
+
 
