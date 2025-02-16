@@ -171,13 +171,80 @@ class RequestSRC {
         });
 
   // ✅ API to Get Logs (for displaying in the dashboard)
-this.router.get(`${this.config.dashboardRoute}/logs`, async (req, res) => {
+  this.router.get(`${this.config.dashboardRoute}/logs`, async (req, res) => {
     try {
-        const result = await database.query("SELECT * FROM logs ORDER BY timestamp DESC LIMIT 100"); // Always fetch latest 100 logs
+        const result = await database.query("SELECT * FROM logs ORDER BY timestamp DESC LIMIT 100");
         res.json(result.rows);
     } catch (error) {
         console.error("❌ Error fetching logs from database:", error);
         res.status(500).json({ error: "Failed to retrieve logs" });
+    }
+});
+
+// ✅ API to Get Logs with sorting enabled
+this.router.get(`${this.config.dashboardRoute}/logs`, async (req, res) => {
+    const { page = 1, limit = 100, sortOrder = "DESC" } = req.query;
+
+    const offset = (page - 1) * limit;
+
+    try {
+        const logsQuery = `
+            SELECT * FROM logs 
+            ORDER BY timestamp ${sortOrder}
+            LIMIT $1 OFFSET $2;
+        `;
+        const countQuery = `SELECT COUNT(*) FROM logs;`;
+
+        const logsResult = await database.query(logsQuery, [limit, offset]);
+        const countResult = await database.query(countQuery);
+
+        res.json({
+            totalLogs: parseInt(countResult.rows[0].count),
+            page: parseInt(page),
+            limit: parseInt(limit),
+            data: logsResult.rows
+        });
+    } catch (error) {
+        console.error("❌ Error fetching logs from database:", error);
+        res.status(500).json({ error: "Failed to retrieve logs" });
+    }
+});
+
+//Api to retrieve chart data on first load of dashboard
+this.router.get(`${this.config.dashboardRoute}/chart-data`, async (req, res) => {
+    try {
+        const result = await database.query("SELECT * FROM logs ORDER BY timestamp DESC LIMIT 100");
+        res.json(result.rows);
+    } catch (error) {
+        console.error("❌ Error fetching logs from database:", error);
+        res.status(500).json({ error: "Failed to retrieve logs" });
+    }
+});
+
+//Update chart data based on last ID 
+this.router.get(`${this.config.dashboardRoute}/chart-data`, async (req, res) => {
+    const { lastId = 0, groupBy = "req_type", timeRange = "hour" } = req.query;
+
+    let timeBucket;
+    if (timeRange === "minute") timeBucket = "DATE_TRUNC('minute', timestamp)";
+    else if (timeRange === "hour") timeBucket = "DATE_TRUNC('hour', timestamp)";
+    else if (timeRange === "day") timeBucket = "DATE_TRUNC('day', timestamp)";
+    else timeBucket = "DATE_TRUNC('hour', timestamp)"; // Default to hourly
+
+    try {
+        const query = `
+            SELECT id, ${timeBucket} AS time, ${groupBy}, COUNT(*) AS count
+            FROM logs
+            WHERE id > $1
+            GROUP BY id, time, ${groupBy}
+            ORDER BY id ASC;  -- ✅ Ensures logs are added in correct order
+        `;
+
+        const result = await database.query(query, [lastId]);
+        res.json(result.rows);
+    } catch (error) {
+        console.error("❌ Error fetching incremental chart data:", error);
+        res.status(500).json({ error: "Failed to retrieve chart data" });
     }
 });
 

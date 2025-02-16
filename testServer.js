@@ -28,7 +28,7 @@ app.get('/', (req, res) => {
 
 // Example route using requestSRC.add()
 app.get('/other', (req, res) => {
-    requestSRC.add(req, 'well'); // Log the request and add to database
+    requestSRC.add(req, 'youKnow'); // Log the request and add to database
     
     //normal code
     res.send();

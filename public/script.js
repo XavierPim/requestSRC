@@ -127,7 +127,7 @@ async function fetchGraphData(groupBy = "req_type") {
     if (!data || data.length === 0) return;
 
     let groupedData = {};
-    let colorIndex = 0; // ✅ Start from first color
+    let colorIndex = 0;
 
     data.forEach(log => {
         let localTimestamp = convertUTCtoLocal(log.timestamp, true);
@@ -164,14 +164,13 @@ async function fetchGraphData(groupBy = "req_type") {
             .map(([time, count]) => ({ x: new Date(time), y: count }))
             .sort((a, b) => a.x - b.x), 
         fill: false,
-        borderColor: assignedColors[key] // ✅ Use assigned colors
+        borderColor: assignedColors[key] 
     }));
 
     let canvas = document.getElementById("logChart");
     let ctx = canvas.getContext("2d");
 
     if (window.chartInstance) {
-        // ✅ Smoothly update the graph instead of resetting it
         window.chartInstance.data.datasets = datasets;
         window.chartInstance.update();
     } else {
