@@ -88,7 +88,8 @@ async function fetchLogs() {
             return sortOrder === "asc" ? valA.localeCompare(valB) : valB.localeCompare(valA);
         });
 
-        updateSortIcons(); 
+        updateSortIcons(); // ✅ Keep sorting icons updated
+    }
 
     data.data.forEach(log => {
         let localTime = convertUTCtoLocal(log.timestamp, false);
@@ -107,7 +108,6 @@ async function fetchLogs() {
 
     document.getElementById("currentPageDisplay").innerText = `Page: ${currentPage}`;
 }
-
 
 
 
@@ -214,6 +214,13 @@ function convertUTCtoLocal(utcDateString, forChart = false) {
 }
 
 
+async function setupToggles() {
+    let response = await fetch(`${dashboardRoute}/config`);
+    let config = await response.json();
+
+    document.getElementById("toggleAnonymize").checked = config.anonymize;
+} 
+
 async function anonToggle() {
     let response = await fetch(`${dashboardRoute}/config`);
     let config = await response.json();
@@ -251,6 +258,21 @@ function prevPage() {
         fetchLogs();
     }
 }
+
+function fetchLogsWithSorting(columnIndex) {
+    if (currentSortColumn === columnIndex) {
+        currentSortOrder = currentSortOrder === "asc" ? "desc" : "asc";
+    } else {
+        currentSortOrder = "asc";
+    }
+    currentSortColumn = columnIndex;
+
+    localStorage.setItem("sortColumn", columnIndex);
+    localStorage.setItem("sortOrder", currentSortOrder);
+
+    fetchLogs(); // ✅ Fetch logs again with updated sorting
+}
+
 
 function updateSortIcons() {
     for (let i = 0; i < 7; i++) {

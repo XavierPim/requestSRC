@@ -15,8 +15,8 @@
     <!-- Toggle Table / Graph -->
     <button id="toggleView">📈 Switch to Graph</button>
 
-      <!-- Graph Grouping Options (Initially Hidden) -->
-      <div id="graphOptions" style="display: none; margin-top: 10px;">
+    <!-- Graph Grouping Options (Initially Hidden) -->
+    <div id="graphOptions" style="display: none; margin-top: 10px;">
         <label>Group By:</label>
         <select id="groupBy" onchange="fetchGraphData(this.value)">
             <option value="req_type">Request Type</option>
@@ -35,7 +35,6 @@
         <option value="month">Last 3 Months</option>
         <option value="quarter">Last 6 Months</option>
     </select>
-</div>
 
     <!-- Settings Panel -->
     <div class="settings">
@@ -50,32 +49,38 @@
     <table id="logTable">
         <thead>
             <tr>
-                <th onclick="sortTable(0)">Timestamp <span id="sortIcon0">⬍</span></th>
-                <th onclick="sortTable(1)">IP Address <span id="sortIcon1">⬍</span></th>
-                <th onclick="sortTable(2)">City <span id="sortIcon2">⬍</span></th>
-                <th onclick="sortTable(3)">Region <span id="sortIcon3">⬍</span></th>
-                <th onclick="sortTable(4)">Country <span id="sortIcon4">⬍</span></th>
-                <th onclick="sortTable(5)">User-Agent <span id="sortIcon5">⬍</span></th>
-                <th onclick="sortTable(6)">Type <span id="sortIcon6">⬍</span></th>
+                <th onclick="fetchLogsWithSorting(0)">Timestamp <span id="sortIcon0">⬍</span></th>
+                <th onclick="fetchLogsWithSorting(1)">IP Address <span id="sortIcon1">⬍</span></th>
+                <th onclick="fetchLogsWithSorting(2)">City <span id="sortIcon2">⬍</span></th>
+                <th onclick="fetchLogsWithSorting(3)">Region <span id="sortIcon3">⬍</span></th>
+                <th onclick="fetchLogsWithSorting(4)">Country <span id="sortIcon4">⬍</span></th>
+                <th onclick="fetchLogsWithSorting(5)">User-Agent <span id="sortIcon5">⬍</span></th>
+                <th onclick="fetchLogsWithSorting(6)">Type <span id="sortIcon6">⬍</span></th>
             </tr>
         </thead>
         <tbody>
             <!-- Log data will be inserted here -->
         </tbody>
     </table>
-    
 
     <!-- Graph View (Hidden by Default) -->
     <canvas id="logChart" style="display:none; width:100%; max-height:400px;"></canvas>
-    
+
     <!-- Pagination controls -->
     <div id="pageButtons">
         <button onclick="prevPage()">⬅️ Previous</button>
         <button onclick="nextPage()">➡️ Next</button>
         <span id="currentPageDisplay">Page: 1</span>
     </div> 
+
     <script src="./script.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            anonToggle(); 
+        });
+    </script>
 </body>
 
 </html>
