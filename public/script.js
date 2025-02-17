@@ -9,16 +9,16 @@ let currentSortOrder = "asc";
 let currentPage = 1;
 const limit = 100;
 
-// ✅ Fetch logs when the dashboard loads
 document.addEventListener("DOMContentLoaded", () => {
     currentSortColumn = localStorage.getItem("sortColumn") 
         ? parseInt(localStorage.getItem("sortColumn")) 
         : null;
     currentSortOrder = localStorage.getItem("sortOrder") || "asc";
 
-    fetchLogs();
+    fetchLogs(); 
     setupToggles();
 });
+
 
 
 // ✅ Fetch graph data when switching to graph mode
@@ -48,10 +48,10 @@ document.getElementById("toggleView").addEventListener("click", () => {
 
 async function fetchLogs() {
     let filters = { 
-        limit, 
-        page: currentPage, 
+        limit: 50, // ✅ Now fetching only 50 logs per page
+        page: currentPage,
         sortColumn: localStorage.getItem("sortColumn") || null,
-        sortOrder: localStorage.getItem("sortOrder") || "asc"
+        sortOrder: localStorage.getItem("sortOrder") || "desc"
     };
 
     let query = new URLSearchParams(filters).toString();
@@ -68,15 +68,13 @@ async function fetchLogs() {
         let columnIndex = parseInt(filters.sortColumn);
         let sortOrder = filters.sortOrder;
 
-        data.sort((a, b) => {
+        data.data.sort((a, b) => {
             let valA = a[Object.keys(a)[columnIndex]];
             let valB = b[Object.keys(b)[columnIndex]];
         
-            // ✅ Handle missing values
             if (valA === undefined || valA === null) valA = "";
             if (valB === undefined || valB === null) valB = "";
         
-            // ✅ Check if values are numbers
             let numA = parseFloat(valA);
             let numB = parseFloat(valB);
         
@@ -84,16 +82,15 @@ async function fetchLogs() {
                 return sortOrder === "asc" ? numA - numB : numB - numA;
             }
         
-            // ✅ Convert to string for localeCompare()
             valA = String(valA).toLowerCase();
             valB = String(valB).toLowerCase();
         
             return sortOrder === "asc" ? valA.localeCompare(valB) : valB.localeCompare(valA);
         });
-        updateSortIcons();
-    }
 
-    data.forEach(log => {
+        updateSortIcons(); 
+
+    data.data.forEach(log => {
         let localTime = convertUTCtoLocal(log.timestamp, false);
 
         let row = `<tr>
@@ -105,11 +102,12 @@ async function fetchLogs() {
             <td>${log.user_agent}</td>
             <td>${log.req_type}</td>
         </tr>`;
-        tbody.innerHTML += row; // ✅ Append new page data
+        tbody.innerHTML += row;
     });
 
     document.getElementById("currentPageDisplay").innerText = `Page: ${currentPage}`;
 }
+
 
 
 
@@ -216,7 +214,7 @@ function convertUTCtoLocal(utcDateString, forChart = false) {
 }
 
 
-async function setupToggles() {
+async function anonToggle() {
     let response = await fetch(`${dashboardRoute}/config`);
     let config = await response.json();
 
@@ -239,21 +237,6 @@ async function updateConfig() {
     } else {
         alert("❌ Failed to update settings!");
     }
-}
-
-function sortTable(columnIndex) {
-    if (currentSortColumn === columnIndex) {
-        currentSortOrder = currentSortOrder === "asc" ? "desc" : "asc";
-    } else {
-        currentSortOrder = "asc";
-    }
-    currentSortColumn = columnIndex;
-
-    // ✅ Save sorting state in localStorage
-    localStorage.setItem("sortColumn", columnIndex);
-    localStorage.setItem("sortOrder", currentSortOrder);
-
-    fetchLogs(); // ✅ Fetch logs again with sorting applied
 }
 
 

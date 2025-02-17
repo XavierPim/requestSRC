@@ -170,20 +170,9 @@ class RequestSRC {
             res.sendFile(path.join(__dirname, "../public/requestSRCdashboard.html"));
         });
 
-  // ✅ API to Get Logs (for displaying in the dashboard)
-  this.router.get(`${this.config.dashboardRoute}/logs`, async (req, res) => {
-    try {
-        const result = await database.query("SELECT * FROM logs ORDER BY timestamp DESC LIMIT 100");
-        res.json(result.rows);
-    } catch (error) {
-        console.error("❌ Error fetching logs from database:", error);
-        res.status(500).json({ error: "Failed to retrieve logs" });
-    }
-});
-
-// ✅ API to Get Logs with sorting enabled
+ // ✅ API to Get Logs with Pagination & Sorting
 this.router.get(`${this.config.dashboardRoute}/logs`, async (req, res) => {
-    const { page = 1, limit = 100, sortOrder = "DESC" } = req.query;
+    const { page = 1, limit = 50, sortOrder = "DESC" } = req.query;
 
     const offset = (page - 1) * limit;
 
