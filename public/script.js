@@ -110,7 +110,6 @@ async function fetchLogs() {
 }
 
 
-
 // ✅ Color palette for assigning colors to request types
 const colorPalette = [
     "#FF5733", "#33FF57", "#3357FF", "#FF33A1", "#A133FF", "#33FFF5", "#FFC300", "#FF5733",
@@ -289,17 +288,17 @@ function updateSortIcons() {
 }
 
 
-// ✅ Automatically refresh only the active view every 15 seconds
+// ✅ Automatically refresh only the active views
 setInterval(() => {
     let table = document.getElementById("logTable");
     let graph = document.getElementById("logChart");
 
     if (table.style.display !== "none") {
-        fetchLogs(); // ✅ Refresh table while keeping sorting
+        fetchLogs(); 
     } else if (graph.style.display !== "none") {
         let groupBy = document.getElementById("groupBy").value;
-        fetchGraphData(groupBy); // ✅ Refresh graph only when visible
+        fetchGraphData(groupBy); 
     }
-}, 5000); // 🔄 Increased to 5 seconds to reduce API strain
+}, 5000); 
 
 

@@ -199,43 +199,67 @@ this.router.get(`${this.config.dashboardRoute}/logs`, async (req, res) => {
     }
 });
 
-//Api to retrieve chart data on first load of dashboard
+const activeFilters = {}; // Store filters per client (keyed by client IP)
+
 this.router.get(`${this.config.dashboardRoute}/chart-data`, async (req, res) => {
-    try {
-        const result = await database.query("SELECT * FROM logs ORDER BY timestamp DESC LIMIT 100");
-        res.json(result.rows);
-    } catch (error) {
-        console.error("❌ Error fetching logs from database:", error);
-        res.status(500).json({ error: "Failed to retrieve logs" });
+    let { lastId = "0", timeRange = "hour", groupBy = "req_type", filterValue } = req.query;
+
+    lastId = parseInt(lastId, 10); 
+
+    // Get client identifier (to persist filters)
+    const clientId = req.ip || "global";
+
+    // Store active filter for this client
+    if (filterValue) {
+        activeFilters[clientId] = filterValue;
     }
-});
 
-//Update chart data based on last ID 
-this.router.get(`${this.config.dashboardRoute}/chart-data`, async (req, res) => {
-    const { lastId = 0, groupBy = "req_type", timeRange = "hour" } = req.query;
+    // Apply stored filter if incremental update
+    const activeFilter = activeFilters[clientId] || null;
 
-    let timeBucket;
-    if (timeRange === "minute") timeBucket = "DATE_TRUNC('minute', timestamp)";
-    else if (timeRange === "hour") timeBucket = "DATE_TRUNC('hour', timestamp)";
-    else if (timeRange === "day") timeBucket = "DATE_TRUNC('day', timestamp)";
-    else timeBucket = "DATE_TRUNC('hour', timestamp)"; // Default to hourly
+    // ✅ Move time filtering inside SQL, not as a parameter
+    let timeInterval;
+    if (timeRange === "hour") timeInterval = "NOW() - INTERVAL '24 hours'";
+    else if (timeRange === "day") timeInterval = "NOW() - INTERVAL '7 days'";
+    else if (timeRange === "week") timeInterval = "NOW() - INTERVAL '1 month'";
+    else if (timeRange === "month") timeInterval = "NOW() - INTERVAL '3 months'";
+    else if (timeRange === "quarter") timeInterval = "NOW() - INTERVAL '6 months'";
+    else timeInterval = "NOW() - INTERVAL '24 hours'"; // Default 24 hours
 
     try {
-        const query = `
-            SELECT id, ${timeBucket} AS time, ${groupBy}, COUNT(*) AS count
+        let params = []; // ✅ No need to pass timeInterval as a parameter
+        let query = `
+            SELECT id, DATE_TRUNC('${timeRange}', timestamp) AS time, ${groupBy}, COUNT(*) AS count
             FROM logs
-            WHERE id > $1
-            GROUP BY id, time, ${groupBy}
-            ORDER BY id ASC;  -- ✅ Ensures logs are added in correct order
+            WHERE timestamp >= ${timeInterval} 
         `;
 
-        const result = await database.query(query, [lastId]);
+        // ✅ Only add lastId condition if lastId > 0
+        if (lastId > 0) {
+            query += ` AND id > $1::BIGINT`;
+            params.push(lastId);
+        }
+
+        // ✅ Apply filter dynamically
+        if (activeFilter) {
+            query += ` AND ${groupBy} = $${params.length + 1}`;
+            params.push(activeFilter);
+        }
+
+        query += `
+            GROUP BY time, ${groupBy}, id
+            ORDER BY id ASC
+            LIMIT 1000;
+        `;
+
+        const result = await database.query(query, params.length > 0 ? params : undefined);
         res.json(result.rows);
     } catch (error) {
-        console.error("❌ Error fetching incremental chart data:", error);
+        console.error("❌ Error fetching chart data:", error);
         res.status(500).json({ error: "Failed to retrieve chart data" });
     }
 });
+
 
 
         // ✅ API route to fetch the current config
