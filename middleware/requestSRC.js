@@ -252,8 +252,15 @@ this.router.get(`${this.config.dashboardRoute}/chart-data`, async (req, res) => 
             LIMIT 1000;
         `;
 
+
+
         const result = await database.query(query, params.length > 0 ? params : undefined);
-        res.json(result.rows);
+        const newLastId = result.rows.length > 0 ? result.rows[result.rows.length - 1].id : lastId;
+
+        res.json({
+            data: result.rows,
+            lastId: newLastId
+        });
     } catch (error) {
         console.error("❌ Error fetching chart data:", error);
         res.status(500).json({ error: "Failed to retrieve chart data" });
