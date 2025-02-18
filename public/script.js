@@ -48,7 +48,7 @@ document.getElementById("toggleView").addEventListener("click", () => {
 
 async function fetchLogs() {
     let filters = { 
-        limit: 50, // ✅ Now fetching only 50 logs per page
+        limit: 50, 
         page: currentPage,
         sortColumn: localStorage.getItem("sortColumn") || null,
         sortOrder: localStorage.getItem("sortOrder") || "desc"
@@ -117,33 +117,48 @@ const colorPalette = [
 ];
 let assignedColors = {}; 
 let lastId = 0;
+let reqTypeFilters = new Set(); // ✅ Stores selected request types
 
-async function fetchGraphData(groupBy = "req_type") {
+async function fetchGraphData() {
     let timeRange = document.getElementById("timeRange").value;
-    console.log(`Fetching chart data with timeRange: ${timeRange}, groupBy: ${groupBy}`);
+    let groupBy = document.getElementById("groupBy").value;
 
-    // ✅ Fetch chart data from backend
+    // ✅ Show or hide checkboxes based on selected grouping
+    let filterContainer = document.getElementById("reqTypeFilters");
+    if (groupBy === "req_type") {
+        filterContainer.style.display = "block"; 
+    } else {
+        filterContainer.style.display = "none"; 
+        reqTypeFilters.clear();
+    }
+
     let response = await fetch(`${dashboardRoute}/chart-data?lastId=${lastId}&timeRange=${timeRange}&groupBy=${groupBy}`);
     let result = await response.json();
 
-
     if (!result || result.data.length === 0) return;
 
-    // ✅ Update lastId to track the latest fetched data
-    lastId = result.lastId;
+    lastId = result.lastId; // ✅ Track the latest fetched ID
 
     let groupedData = {};
     let colorIndex = 0;
+
+    // ✅ Only update checkboxes when `req_type` is selected
+    if (groupBy === "req_type") {
+        let uniqueReqTypes = new Set(result.data.map(log => log[groupBy]));
+        updateReqTypeCheckboxes(uniqueReqTypes);
+    }
 
     result.data.forEach(log => {
         let timeKey = new Date(log.time).toISOString();
         let key = log[groupBy] || "Unknown";
 
+        // ✅ Skip unselected request types
+        if (groupBy === "req_type" && reqTypeFilters.size > 0 && !reqTypeFilters.has(key)) return;
+
         if (!groupedData[key]) groupedData[key] = {};
         if (!groupedData[key][timeKey]) groupedData[key][timeKey] = 0;
         groupedData[key][timeKey] += log.count;
 
-        // ✅ Assign consistent colors for request types
         if (!assignedColors[key]) {
             assignedColors[key] = colorPalette[colorIndex % colorPalette.length];
             colorIndex++;
@@ -157,21 +172,19 @@ async function fetchGraphData(groupBy = "req_type") {
         borderColor: assignedColors[key]
     }));
 
- let canvas = document.getElementById("logChart");
+    let canvas = document.getElementById("logChart");
     let ctx = canvas.getContext("2d");
 
     if (window.chartInstance) {
-        // ✅ Update the existing chart instance
         window.chartInstance.data.datasets = datasets;
         window.chartInstance.update();
     } else {
-        // ✅ Create the chart only once
         window.chartInstance = new Chart(ctx, {
             type: "line",
             data: { datasets },
             options: {
                 responsive: true,
-                animation: false, // ✅ Disable animations
+                animation: false,
                 hover: { animationDuration: 0 },
                 responsiveAnimationDuration: 0,
                 scales: {
@@ -181,6 +194,40 @@ async function fetchGraphData(groupBy = "req_type") {
             }
         });
     }
+}
+
+/**
+ * ✅ Dynamically updates checkboxes for filtering `req_type`
+ */
+function updateReqTypeCheckboxes(uniqueReqTypes) {
+    let container = document.getElementById("reqTypeCheckboxes");
+    container.innerHTML = ""; // ✅ Clear previous checkboxes
+
+    uniqueReqTypes.forEach(type => {
+        let checkbox = document.createElement("input");
+        checkbox.type = "checkbox";
+        checkbox.value = type;
+        checkbox.checked = reqTypeFilters.size === 0 || reqTypeFilters.has(type); // Default: all checked
+        checkbox.onchange = toggleReqTypeFilter;
+
+        let label = document.createElement("label");
+        label.appendChild(checkbox);
+        label.appendChild(document.createTextNode(` ${type}`));
+
+        container.appendChild(label);
+    });
+}
+
+/**
+ * ✅ Updates `reqTypeFilters` based on checkbox state
+ */
+function toggleReqTypeFilter(event) {
+    if (event.target.checked) {
+        reqTypeFilters.add(event.target.value);
+    } else {
+        reqTypeFilters.delete(event.target.value);
+    }
+    fetchGraphData(); // ✅ Refresh chart with updated filters
 }
 
 
@@ -290,8 +337,7 @@ setInterval(() => {
     if (table.style.display !== "none") {
         fetchLogs(); 
     } else if (graph.style.display !== "none") {
-        let groupBy = document.getElementById("groupBy").value;
-        fetchGraphData(groupBy); 
+        fetchGraphData(); 
     }
 }, 5000); 
 

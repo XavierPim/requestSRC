@@ -199,7 +199,7 @@ this.router.get(`${this.config.dashboardRoute}/logs`, async (req, res) => {
     }
 });
 
-const activeFilters = {}; // Store filters per client (keyed by client IP)
+const activeFilters = {}; // ✅ Global filter storage per user
 
 this.router.get(`${this.config.dashboardRoute}/chart-data`, async (req, res) => {
     let { lastId = "0", timeRange = "hour", groupBy = "req_type", filterValue } = req.query;
@@ -207,8 +207,19 @@ this.router.get(`${this.config.dashboardRoute}/chart-data`, async (req, res) => 
     lastId = parseInt(lastId, 10);
     const clientId = req.ip || "global"; // Track filter state per client
 
-    if (filterValue) activeFilters[clientId] = filterValue;
+    // ✅ Store filter per user (persists between requests)
+    if (filterValue) {
+        activeFilters[clientId] = filterValue;
+    }
+
+    // ✅ Use the stored filter if none is provided in this request
     const activeFilter = activeFilters[clientId] || null;
+
+    // ✅ Validate `groupBy` to prevent SQL injection
+    const validGroupByFields = ["req_type", "city", "region", "country"];
+    if (!validGroupByFields.includes(groupBy)) {
+        return res.status(400).json({ error: "Invalid groupBy parameter" });
+    }
 
     // ✅ Correct SQL time interval formatting
     let timeInterval;
@@ -224,7 +235,7 @@ this.router.get(`${this.config.dashboardRoute}/chart-data`, async (req, res) => 
         let query = `
             SELECT DATE_TRUNC('${timeRange}', timestamp) AS time, ${groupBy}, COUNT(*) AS count
             FROM logs
-            WHERE timestamp >= ${timeInterval} 
+            WHERE timestamp >= ${timeInterval}
         `;
 
         // ✅ Conditionally add `lastId` filter
@@ -233,20 +244,18 @@ this.router.get(`${this.config.dashboardRoute}/chart-data`, async (req, res) => 
             params.push(lastId);
         }
 
-        // ✅ Add filter dynamically
+        // ✅ Apply stored filter dynamically
         if (activeFilter) {
             query += ` AND ${groupBy} = $${params.length + 1}`;
             params.push(activeFilter);
         }
 
-        // ✅ Ensure `GROUP BY` is placed **AFTER** filtering
+        // ✅ Ensure `GROUP BY` dynamically adjusts
         query += `
             GROUP BY time, ${groupBy}
             ORDER BY time ASC
             LIMIT 1000;
         `;
-
-        console.log("Executing Query:", query, "With Params:", params);
 
         const result = await database.query(query, params.length > 0 ? params : undefined);
         const newLastId = result.rows.length > 0 ? result.rows[result.rows.length - 1].id : lastId;
@@ -254,6 +263,7 @@ this.router.get(`${this.config.dashboardRoute}/chart-data`, async (req, res) => 
         res.json({
             data: result.rows,
             lastId: newLastId, // ✅ Track last ID for incremental updates
+            activeFilter: activeFilters[clientId], // ✅ Send active filter back to client
         });
 
     } catch (error) {
@@ -261,8 +271,6 @@ this.router.get(`${this.config.dashboardRoute}/chart-data`, async (req, res) => 
         res.status(500).json({ error: "Failed to retrieve chart data" });
     }
 });
-
-
 
         // ✅ API route to fetch the current config
         this.router.get(`${dashboardRoute}/config`, (req, res) => {
