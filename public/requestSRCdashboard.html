@@ -10,36 +10,48 @@
 </head>
 
 <body>
-    <h1>📊 RequestSRC Dashboard</h1>
 
-    <!-- Toggle Table / Graph -->
-    <button id="toggleView">📈 Switch to Graph</button>
-
-<!-- Graph Grouping Options -->
-<div id="graphOptions" style="margin-top: 10px;">
-    <label>Group By:</label>
-    <select id="groupBy" onchange="fetchGraphData()">
-        <option value="req_type">Request Category</option>
-        <!-- <option value="ip">IP Address</option> -->
-        <option value="city">City</option>
-        <option value="region">Region</option>
-        <option value="country">Country</option>
-    </select>
-</div>
-
-    <label>Time Range:</label>
-    <select id="timeRange" onchange="fetchGraphData()">
-        <option value="hour">Last 24 Hours</option>
-        <option value="day">Last 7 Days</option>
-        <option value="week">Last 1 Month</option>
-        <option value="month">Last 3 Months</option>
-        <option value="quarter">Last 6 Months</option>
-    </select>
-
-
-    <!-- Settings Panel -->
+    <div id="header">
+        <h1>📊 RequestSRC Dashboard</h1>
+        <!-- Toggle Table / Graph -->
+        <div class="checkbox_item citem_3">
+            <h3 class="title">View Mode</h3>
+            <label class="checkbox_wrap">
+                <input type="checkbox" id="toggleView" class="checkbox_inp">
+                <span class="checkbox_mark"></span>
+            </label>
+        </div>
+    </div>
     <div class="settings">
-        <h2>⚙️ Configuration</h2>
+
+
+
+
+        <!-- Graph Grouping Options -->
+        <div id="graphOptions">
+            <div style="margin-top: 10px;">
+                <label>Group By:</label>
+                <select id="groupBy" onchange="fetchGraphData()">
+                    <option value="req_type">Request Category</option>
+                    <!-- <option value="ip">IP Address</option> -->
+                    <option value="city">City</option>
+                    <option value="region">Region</option>
+                    <option value="country">Country</option>
+                </select>
+            </div>
+
+            <label>Time Range:</label>
+            <select id="timeRange" onchange="fetchGraphData()">
+                <option value="hour">Last 24 Hours</option>
+                <option value="day">Last 7 Days</option>
+                <option value="week">Last 1 Month</option>
+                <option value="month">Last 3 Months</option>
+                <option value="quarter">Last 6 Months</option>
+            </select>
+        </div>
+
+        <!-- Settings Panel -->
+
         <label>
             <input type="checkbox" id="toggleAnonymize"> Anonymize IP
         </label>

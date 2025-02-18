@@ -1,43 +1,13 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>RequestSRC Dashboard</title>
-    <link rel="stylesheet" href="/public/style.css">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-</head>
-<body>
-    <h1>📊 RequestSRC Dashboard</h1>
-    
-    <button id="toggleView">📈 Switch to Graph</button>
+# Normalize line endings
+* text=auto
 
-    <div class="settings">
-        <h2>⚙️ Settings</h2>
-        <label>
-            <input type="checkbox" id="toggleAnonymize"> Anonymize IP
-        </label>
-        <label>
-            <input type="checkbox" id="toggleUserAgent"> Log User-Agent
-        </label>
-        <button onclick="updateConfig()">Save Settings</button>
-    </div>
+# Keep HTML, CSS, and JS as UTF-8 text
+*.html text
+*.css text
+*.js text
 
-    <table id="logTable">
-        <thead>
-            <tr>
-                <th>Timestamp</th>
-                <th>IP Address</th>
-                <th>Location</th>
-                <th>User-Agent</th>
-                <th>Type</th>
-            </tr>
-        </thead>
-        <tbody></tbody>
-    </table>
-
-    <canvas id="logChart" style="display:none;"></canvas>
-
-    <script src="/public/script.js"></script>
-</body>
-</html>
+# Ignore compiled binaries
+*.exe binary
+*.dll binary
+*.png binary
+*.jpg binary

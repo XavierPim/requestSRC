@@ -22,18 +22,17 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
 // ✅ Fetch graph data when switching to graph mode
-document.getElementById("toggleView").addEventListener("click", () => {
+document.getElementById("toggleView").addEventListener("change", function () {
     let table = document.getElementById("logTable");
     let page = document.getElementById("pageButtons");
     let graph = document.getElementById("logChart");
     let selectMenu = document.getElementById("groupBy");
 
-    if (table.style.display !== "none") {
+    if (this.checked) {
         table.style.display = "none";
         page.style.display = "none"; 
         graph.style.display = "block";
         selectMenu.style.display = "block";
-        document.getElementById("toggleView").innerText = "📊 Switch to Table";
 
         // ✅ Refresh graph when toggling
         fetchGraphData(document.getElementById("groupBy").value);
@@ -42,7 +41,6 @@ document.getElementById("toggleView").addEventListener("click", () => {
         page.style.display = "block";
         graph.style.display = "none";
         selectMenu.style.display = "none";
-        document.getElementById("toggleView").innerText = "📈 Switch to Graph";
     }
 });
 
