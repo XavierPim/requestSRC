@@ -116,72 +116,66 @@ const colorPalette = [
     "#C70039", "#900C3F", "#581845", "#28A745", "#17A2B8", "#DC3545", "#FFC107"
 ];
 let assignedColors = {}; 
+let lastId = 0;
 
 async function fetchGraphData(groupBy = "req_type") {
-    let response = await fetch(`${dashboardRoute}/logs`);
-    let data = await response.json();
+    let timeRange = document.getElementById("timeRange").value;
+    console.log(`Fetching chart data with timeRange: ${timeRange}, groupBy: ${groupBy}`);
 
-    if (!data || data.length === 0) return;
+    // ✅ Fetch chart data from backend
+    let response = await fetch(`${dashboardRoute}/chart-data?lastId=${lastId}&timeRange=${timeRange}&groupBy=${groupBy}`);
+    let result = await response.json();
+
+
+    if (!result || result.data.length === 0) return;
+
+    // ✅ Update lastId to track the latest fetched data
+    lastId = result.lastId;
 
     let groupedData = {};
     let colorIndex = 0;
 
-    data.forEach(log => {
-        let localTimestamp = convertUTCtoLocal(log.timestamp, true);
-        if (!localTimestamp) return;
-    
+    result.data.forEach(log => {
+        let timeKey = new Date(log.time).toISOString();
         let key = log[groupBy] || "Unknown";
 
-        let timeUnit = document.getElementById("timeRange")?.value || "minute"; 
-        let timeKey;
-    
-        if (timeUnit === "minute") {
-            timeKey = localTimestamp.toISOString().slice(0, 16) + ":00.000Z"; 
-        } else if (timeUnit === "hour") {
-            timeKey = localTimestamp.toISOString().slice(0, 13) + ":00:00.000Z";
-        } else if (timeUnit === "day") {
-            timeKey = localTimestamp.toISOString().slice(0, 10) + "T00:00:00.000Z";
-        }
-    
         if (!groupedData[key]) groupedData[key] = {};
         if (!groupedData[key][timeKey]) groupedData[key][timeKey] = 0;
-    
-        groupedData[key][timeKey]++;
+        groupedData[key][timeKey] += log.count;
 
-        // ✅ Assign a fixed color if not already assigned
+        // ✅ Assign consistent colors for request types
         if (!assignedColors[key]) {
-            assignedColors[key] = colorPalette[colorIndex % colorPalette.length]; // Cycle through colors
+            assignedColors[key] = colorPalette[colorIndex % colorPalette.length];
             colorIndex++;
         }
     });
 
     let datasets = Object.keys(groupedData).map(key => ({
         label: key,
-        data: Object.entries(groupedData[key])
-            .map(([time, count]) => ({ x: new Date(time), y: count }))
-            .sort((a, b) => a.x - b.x), 
+        data: Object.entries(groupedData[key]).map(([time, count]) => ({ x: new Date(time), y: count })),
         fill: false,
-        borderColor: assignedColors[key] 
+        borderColor: assignedColors[key]
     }));
 
-    let canvas = document.getElementById("logChart");
+ let canvas = document.getElementById("logChart");
     let ctx = canvas.getContext("2d");
 
     if (window.chartInstance) {
+        // ✅ Update the existing chart instance
         window.chartInstance.data.datasets = datasets;
         window.chartInstance.update();
     } else {
-        // ✅ Create the graph only once
+        // ✅ Create the chart only once
         window.chartInstance = new Chart(ctx, {
             type: "line",
             data: { datasets },
             options: {
                 responsive: true,
-                animation: false, // ✅ Completely disable animations
-                hover: { animationDuration: 0 }, // ✅ Disable hover effects
-                responsiveAnimationDuration: 0, // ✅ Prevent resize animation
+                animation: false, // ✅ Disable animations
+                hover: { animationDuration: 0 },
+                responsiveAnimationDuration: 0,
                 scales: {
-                    x: { type: "time", time: { unit: "minute" } },
+                    x: { type: "time" },
                     y: { title: { display: true, text: `Count by ${groupBy}` } }
                 }
             }

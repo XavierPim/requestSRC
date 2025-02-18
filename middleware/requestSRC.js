@@ -204,63 +204,58 @@ const activeFilters = {}; // Store filters per client (keyed by client IP)
 this.router.get(`${this.config.dashboardRoute}/chart-data`, async (req, res) => {
     let { lastId = "0", timeRange = "hour", groupBy = "req_type", filterValue } = req.query;
 
-    lastId = parseInt(lastId, 10); 
+    lastId = parseInt(lastId, 10);
+    const clientId = req.ip || "global"; // Track filter state per client
 
-    // Get client identifier (to persist filters)
-    const clientId = req.ip || "global";
-
-    // Store active filter for this client
-    if (filterValue) {
-        activeFilters[clientId] = filterValue;
-    }
-
-    // Apply stored filter if incremental update
+    if (filterValue) activeFilters[clientId] = filterValue;
     const activeFilter = activeFilters[clientId] || null;
 
-    // ✅ Move time filtering inside SQL, not as a parameter
+    // ✅ Correct SQL time interval formatting
     let timeInterval;
     if (timeRange === "hour") timeInterval = "NOW() - INTERVAL '24 hours'";
     else if (timeRange === "day") timeInterval = "NOW() - INTERVAL '7 days'";
     else if (timeRange === "week") timeInterval = "NOW() - INTERVAL '1 month'";
     else if (timeRange === "month") timeInterval = "NOW() - INTERVAL '3 months'";
     else if (timeRange === "quarter") timeInterval = "NOW() - INTERVAL '6 months'";
-    else timeInterval = "NOW() - INTERVAL '24 hours'"; // Default 24 hours
+    else timeInterval = "NOW() - INTERVAL '24 hours'";
 
     try {
-        let params = []; // ✅ No need to pass timeInterval as a parameter
+        let params = [];
         let query = `
-            SELECT id, DATE_TRUNC('${timeRange}', timestamp) AS time, ${groupBy}, COUNT(*) AS count
+            SELECT DATE_TRUNC('${timeRange}', timestamp) AS time, ${groupBy}, COUNT(*) AS count
             FROM logs
             WHERE timestamp >= ${timeInterval} 
         `;
 
-        // ✅ Only add lastId condition if lastId > 0
+        // ✅ Conditionally add `lastId` filter
         if (lastId > 0) {
             query += ` AND id > $1::BIGINT`;
             params.push(lastId);
         }
 
-        // ✅ Apply filter dynamically
+        // ✅ Add filter dynamically
         if (activeFilter) {
             query += ` AND ${groupBy} = $${params.length + 1}`;
             params.push(activeFilter);
         }
 
+        // ✅ Ensure `GROUP BY` is placed **AFTER** filtering
         query += `
-            GROUP BY time, ${groupBy}, id
-            ORDER BY id ASC
+            GROUP BY time, ${groupBy}
+            ORDER BY time ASC
             LIMIT 1000;
         `;
 
-
+        console.log("Executing Query:", query, "With Params:", params);
 
         const result = await database.query(query, params.length > 0 ? params : undefined);
         const newLastId = result.rows.length > 0 ? result.rows[result.rows.length - 1].id : lastId;
 
         res.json({
             data: result.rows,
-            lastId: newLastId
+            lastId: newLastId, // ✅ Track last ID for incremental updates
         });
+
     } catch (error) {
         console.error("❌ Error fetching chart data:", error);
         res.status(500).json({ error: "Failed to retrieve chart data" });

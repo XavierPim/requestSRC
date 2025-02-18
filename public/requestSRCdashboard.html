@@ -28,13 +28,14 @@
     </div>
 
     <label>Time Range:</label>
-    <select id="timeRange" onchange="fetchGraphData(document.getElementById('groupBy').value)">
+    <select id="timeRange" onchange="fetchGraphData()">
         <option value="hour">Last 24 Hours</option>
         <option value="day">Last 7 Days</option>
         <option value="week">Last 1 Month</option>
         <option value="month">Last 3 Months</option>
         <option value="quarter">Last 6 Months</option>
     </select>
+
 
     <!-- Settings Panel -->
     <div class="settings">
@@ -71,14 +72,14 @@
         <button onclick="prevPage()">⬅️ Previous</button>
         <button onclick="nextPage()">➡️ Next</button>
         <span id="currentPageDisplay">Page: 1</span>
-    </div> 
+    </div>
 
     <script src="./script.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
 
     <script>
         document.addEventListener("DOMContentLoaded", () => {
-            anonToggle(); 
+            anonToggle();
         });
     </script>
 </body>
