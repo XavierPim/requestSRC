@@ -2,9 +2,9 @@ body {
     font-family: Arial, sans-serif;
     text-align: center;
     background-image: url('./bg.jpg');
-    background-repeat:repeat;
+    background-repeat:repeat-y;
     background-position:center;
-    background-size:auto;
+    background-size:cover;
 }
 
 #header{
@@ -36,9 +36,10 @@ button {
 }
 
 .settings {
-    align-content: center;
+    display: flex;
+    justify-content: space-around;
     margin: 20px auto;
-    width: 80%;
+    width: 30%;
     background: white;
     padding: 20px;
     border-radius: 10px;

@@ -26,21 +26,20 @@ document.getElementById("toggleView").addEventListener("change", function () {
     let table = document.getElementById("logTable");
     let page = document.getElementById("pageButtons");
     let graph = document.getElementById("logChart");
-    let selectMenu = document.getElementById("groupBy");
+    let graphOptions = document.getElementById("graphOptions");
 
     if (this.checked) {
         table.style.display = "none";
         page.style.display = "none"; 
         graph.style.display = "block";
-        selectMenu.style.display = "block";
-
+        graphOptions.style.display = "block";
         // ✅ Refresh graph when toggling
         fetchGraphData(document.getElementById("groupBy").value);
     } else {
         table.style.display = "block";
         page.style.display = "block";
         graph.style.display = "none";
-        selectMenu.style.display = "none";
+        graphOptions.style.display = "none";
     }
 });
 
@@ -231,16 +230,9 @@ async function setupToggles() {
     document.getElementById("toggleAnonymize").checked = config.anonymize;
 } 
 
-async function anonToggle() {
-    let response = await fetch(`${dashboardRoute}/config`);
-    let config = await response.json();
-
-    document.getElementById("toggleAnonymize").checked = config.anonymize;
-}
-
-async function updateConfig() {
+document.getElementById("toggleAnonymize").addEventListener("change", async function () {
     let newConfig = {
-        anonymize: document.getElementById("toggleAnonymize").checked,
+        anonymize: this.checked, // ✅ Toggle IP anonymization dynamically
     };
 
     const response = await fetch(`${dashboardRoute}/update-config`, { 
@@ -250,11 +242,12 @@ async function updateConfig() {
     });
 
     if (response.ok) {
-        alert("✅ Settings updated successfully!");
+        console.log("✅ Settings updated successfully!");
     } else {
-        alert("❌ Failed to update settings!");
+        console.error("❌ Failed to update settings!");
     }
-}
+});
+
 
 
 function nextPage() {
