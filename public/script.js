@@ -117,19 +117,14 @@ const colorPalette = [
 ];
 let assignedColors = {}; 
 let lastId = 0;
-let reqTypeFilters = new Set(); // ✅ Stores selected request types
-
 async function fetchGraphData() {
     let timeRange = document.getElementById("timeRange").value;
     let groupBy = document.getElementById("groupBy").value;
 
-    // ✅ Show or hide checkboxes based on selected grouping
-    let filterContainer = document.getElementById("reqTypeFilters");
-    if (groupBy === "req_type") {
-        filterContainer.style.display = "block"; 
-    } else {
-        filterContainer.style.display = "none"; 
-        reqTypeFilters.clear();
+    // ✅ Reset `lastId` when switching groupBy to prevent missing data
+    if (window.currentGroupBy !== groupBy) {
+        lastId = 0;
+        window.currentGroupBy = groupBy;
     }
 
     let response = await fetch(`${dashboardRoute}/chart-data?lastId=${lastId}&timeRange=${timeRange}&groupBy=${groupBy}`);
@@ -142,23 +137,15 @@ async function fetchGraphData() {
     let groupedData = {};
     let colorIndex = 0;
 
-    // ✅ Only update checkboxes when `req_type` is selected
-    if (groupBy === "req_type") {
-        let uniqueReqTypes = new Set(result.data.map(log => log[groupBy]));
-        updateReqTypeCheckboxes(uniqueReqTypes);
-    }
-
     result.data.forEach(log => {
-        let timeKey = new Date(log.time).toISOString();
+        let localTime = convertUTCtoLocal(log.time, true); // ✅ Convert UTC to Local
         let key = log[groupBy] || "Unknown";
 
-        // ✅ Skip unselected request types
-        if (groupBy === "req_type" && reqTypeFilters.size > 0 && !reqTypeFilters.has(key)) return;
-
         if (!groupedData[key]) groupedData[key] = {};
-        if (!groupedData[key][timeKey]) groupedData[key][timeKey] = 0;
-        groupedData[key][timeKey] += log.count;
+        if (!groupedData[key][localTime]) groupedData[key][localTime] = 0;
+        groupedData[key][localTime] += log.count;
 
+        // ✅ Ensure colors persist across updates
         if (!assignedColors[key]) {
             assignedColors[key] = colorPalette[colorIndex % colorPalette.length];
             colorIndex++;
@@ -167,7 +154,7 @@ async function fetchGraphData() {
 
     let datasets = Object.keys(groupedData).map(key => ({
         label: key,
-        data: Object.entries(groupedData[key]).map(([time, count]) => ({ x: new Date(time), y: count })),
+        data: Object.entries(groupedData[key]).map(([time, count]) => ({ x: new Date(time), y: count })), // ✅ Use local time
         fill: false,
         borderColor: assignedColors[key]
     }));
@@ -176,7 +163,22 @@ async function fetchGraphData() {
     let ctx = canvas.getContext("2d");
 
     if (window.chartInstance) {
-        window.chartInstance.data.datasets = datasets;
+        let existingLabels = new Set(window.chartInstance.data.datasets.map(ds => ds.label));
+
+        datasets.forEach(newDataset => {
+            let existingDataset = window.chartInstance.data.datasets.find(ds => ds.label === newDataset.label);
+            if (existingDataset) {
+                existingDataset.data = newDataset.data; // ✅ Only update data points
+            } else {
+                window.chartInstance.data.datasets.push(newDataset); // ✅ Add new dataset if missing
+            }
+        });
+
+        // ✅ Remove datasets that no longer exist
+        window.chartInstance.data.datasets = window.chartInstance.data.datasets.filter(ds => 
+            datasets.some(newDs => newDs.label === ds.label)
+        );
+
         window.chartInstance.update();
     } else {
         window.chartInstance = new Chart(ctx, {
@@ -187,6 +189,9 @@ async function fetchGraphData() {
                 animation: false,
                 hover: { animationDuration: 0 },
                 responsiveAnimationDuration: 0,
+                plugins: {
+                    legend: { display: true }, // ✅ Ensure Chart.js legend is active
+                },
                 scales: {
                     x: { type: "time" },
                     y: { title: { display: true, text: `Count by ${groupBy}` } }
@@ -197,41 +202,8 @@ async function fetchGraphData() {
 }
 
 /**
- * ✅ Dynamically updates checkboxes for filtering `req_type`
+ * ✅ Convert UTC timestamp to local time and remove seconds
  */
-function updateReqTypeCheckboxes(uniqueReqTypes) {
-    let container = document.getElementById("reqTypeCheckboxes");
-    container.innerHTML = ""; // ✅ Clear previous checkboxes
-
-    uniqueReqTypes.forEach(type => {
-        let checkbox = document.createElement("input");
-        checkbox.type = "checkbox";
-        checkbox.value = type;
-        checkbox.checked = reqTypeFilters.size === 0 || reqTypeFilters.has(type); // Default: all checked
-        checkbox.onchange = toggleReqTypeFilter;
-
-        let label = document.createElement("label");
-        label.appendChild(checkbox);
-        label.appendChild(document.createTextNode(` ${type}`));
-
-        container.appendChild(label);
-    });
-}
-
-/**
- * ✅ Updates `reqTypeFilters` based on checkbox state
- */
-function toggleReqTypeFilter(event) {
-    if (event.target.checked) {
-        reqTypeFilters.add(event.target.value);
-    } else {
-        reqTypeFilters.delete(event.target.value);
-    }
-    fetchGraphData(); // ✅ Refresh chart with updated filters
-}
-
-
-// ✅ Convert UTC timestamp to local time and remove seconds
 function convertUTCtoLocal(utcDateString, forChart = false) {
     let utcDate = new Date(utcDateString);
     if (isNaN(utcDate)) return null; // Prevent invalid dates
@@ -317,7 +289,7 @@ function fetchLogsWithSorting(columnIndex) {
 function updateSortIcons() {
     for (let i = 0; i < 7; i++) {
         let icon = document.getElementById(`sortIcon${i}`);
-        if (icon) icon.innerText = "⬍"; // Reset all to default
+        if (icon) icon.innerText = ""; // Reset all to default
     }
 
     if (currentSortColumn !== null) {
@@ -327,7 +299,6 @@ function updateSortIcons() {
         }
     }
 }
-
 
 // ✅ Automatically refresh only the active views
 setInterval(() => {

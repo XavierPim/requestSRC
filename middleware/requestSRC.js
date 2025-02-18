@@ -192,7 +192,7 @@ this.router.get(`${this.config.dashboardRoute}/logs`, async (req, res) => {
             page: parseInt(page),
             limit: parseInt(limit),
             data: logsResult.rows
-        });
+        });2
     } catch (error) {
         console.error("❌ Error fetching logs from database:", error);
         res.status(500).json({ error: "Failed to retrieve logs" });

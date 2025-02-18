@@ -27,14 +27,8 @@
     </select>
 </div>
 
-<!-- ✅ Checkboxes for filtering request categories -->
-<div id="reqTypeFilters" style="display: none; margin-top: 10px;">
-    <h3>Filter Request Types:</h3>
-    <div id="reqTypeCheckboxes"></div>
-</div>
-
     <label>Time Range:</label>
-    <select id="timeRange" onchange="fetchGraphData('req_type')">
+    <select id="timeRange" onchange="fetchGraphData()">
         <option value="hour">Last 24 Hours</option>
         <option value="day">Last 7 Days</option>
         <option value="week">Last 1 Month</option>
