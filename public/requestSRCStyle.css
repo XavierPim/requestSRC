@@ -19,24 +19,48 @@ body {
     background-repeat: repeat-y;
     background-position: center;
     background-size: cover;
+
+    width: 100%;
+    min-height: 100vh;
 }
 
 #header {
     display: flex;
     justify-content: space-around;
     align-items: center;
-    width: 90%;
+    width: 90%; /* Table mode width */
     background-color: #3e92cc;
     border-radius: 10px 10px 0 0;
     margin-top: 10px;
+    transition: width 0.3s ease-in-out, background-color 0.3s;
+}
+
+/* Header expands to full-width in graph mode */
+.graph-mode #header {
+    width: 100%;
+    border-radius: 0; /* No rounding when in graph mode */
+    background-color: #d8315b; /* Change color */
 }
 
 
+/* Graph styling */
+#logChart {
+    display: block;
+    background-color: #f7f6fe;
+    border-radius: 12px; 
+    width: 90%;
+    max-width: 1500px;
+    max-height: 800px !important; 
+    min-height: 300px;
+    box-sizing: border-box;
+    padding: 10px;
+    margin-top:20px;
+}
 
 .title {
     color: #ddd;
     margin: 0;
-    font-size: 0.8em;
+    font-size: 0.9em;
 }
 
 h2 {
@@ -53,6 +77,18 @@ select {
 label {
     font-size: 10px;
 }
+
+.req-badge {
+    display: inline-block;
+    padding: 3px 8px;
+    font-size: 0.85em;
+    font-weight: bold;
+    border-radius: 12px;
+    text-align: center;
+    white-space: nowrap;
+    opacity: 0.8;
+}
+
 
 #settings {
     display: flex;
@@ -102,14 +138,6 @@ th {
 }
 
 
-#logChart {
-    display: block;
-    background-color: #f7f6fe;
-    border-radius: 0 0 10px 10px;
-    width: 90% !important;
-    box-sizing: border-box;
-}
-
 button {
     padding: 10px 20px;
     margin: 10px;
@@ -118,7 +146,6 @@ button {
     color: white;
     border: none;
     border-radius: 5px;
-    transition: background 0.3s ease-in-out;
 }
 
 button:hover {
@@ -135,7 +162,7 @@ button:hover {
     padding-left: 50px;
     cursor: pointer;
     user-select: none;
-    font-size: 0.8em;
+    font-size: 0.85em;
 }
 
 /* Hide the default checkbox */
@@ -169,7 +196,6 @@ button:hover {
     border-radius: 50%;
     transition: 0.4s;
 }
-
 
 /* Toggle on state */
 #container input:checked~.checkmark {

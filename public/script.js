@@ -28,20 +28,25 @@ document.getElementById("toggleView").addEventListener("change", function () {
     let graph = document.getElementById("logChart");
     let graphOptions = document.getElementById("graphOptions");
     let anonToggler = document.getElementById("container");
-    let header = document.getElementById("header")
-    let settings = document.getElementById("settings")
-    
+    let header = document.getElementById("header");
+    let settings = document.getElementById("settings");
+    let body = document.body; // ✅ Use body to apply mode-based styles
+
     if (this.checked) {
         table.style.display = "none";
         page.style.display = "none";
         graph.style.display = "block";
         graphOptions.style.display = "block";
         anonToggler.style.display = "none";
-        header.style.backgroundColor = "#d8315b";
+        header.style.padding = "0";
+        header.style.margin = "0";
+        header.style.width = "100%";
         settings.style.backgroundColor = "#d8315b";
-
         
-        // ✅ Refresh graph when toggling
+        // ✅ Apply graph mode styling
+        body.classList.add("graph-mode");
+        
+        // ✅ Refresh chart data
         fetchGraphData(document.getElementById("groupBy").value);
     } else {
         table.style.display = "table";
@@ -49,10 +54,15 @@ document.getElementById("toggleView").addEventListener("change", function () {
         graph.style.display = "none";
         graphOptions.style.display = "none";
         anonToggler.style.display = "flex";
-        header.style.backgroundColor = "#3e92cc";
+        header.style.width = "90%";
+        
         settings.style.backgroundColor = "#3e92cc";
+        
+        // ✅ Remove graph mode styling
+        body.classList.remove("graph-mode");
     }
 });
+
 
 async function fetchLogs() {
     let filters = {
@@ -99,9 +109,21 @@ async function fetchLogs() {
         updateSortIcons(); 
     }
 
+    // ✅ Assign colors to request types (shared with graph)
     data.data.forEach((log, index) => {
         let localTime = convertUTCtoLocal(log.timestamp, false);
-        let rowColor = index % 2 === 0 ? "white" : "#f7f6fe"; 
+        let rowColor = index % 2 === 0 ? "white" : "#f7f6fe";
+
+        let reqType = log.req_type || "Unknown";
+
+        // ✅ Reuse assignedColors from graph
+        if (!assignedColors[reqType]) {
+            assignedColors[reqType] = colorPalette[Object.keys(assignedColors).length % colorPalette.length];
+        }
+
+        // ✅ Generate a lighter version of the color
+        let baseColor = assignedColors[reqType];
+        let lightColor = `${baseColor}30`; // Adds 30% transparency
 
         let row = `<tr style="background-color: ${rowColor};">
             <td>${localTime}</td> 
@@ -110,13 +132,18 @@ async function fetchLogs() {
             <td>${log.region || "Unknown"}</td>
             <td>${log.country || "Unknown"}</td>
             <td>${parseUserAgent(log.user_agent)}</td>
-            <td>${log.req_type}</td>
+            <td>
+                <span class="req-badge" style="background-color: ${lightColor}; color: ${baseColor};">${reqType}</span>
+            </td>
         </tr>`;
+
         tbody.innerHTML += row;
     });
 
     document.getElementById("currentPageDisplay").innerText = `Page: ${currentPage}`;
 }
+
+
 
 
 
@@ -205,6 +232,7 @@ async function fetchGraphData() {
             data: { datasets },
             options: {
                 responsive: true,
+                maintainAspectRatio:  true,
                 animation: false,
                 hover: { animationDuration: 0 },
                 responsiveAnimationDuration: 0,
