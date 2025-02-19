@@ -38,7 +38,7 @@ document.getElementById("toggleView").addEventListener("change", function () {
         // ✅ Refresh graph when toggling
         fetchGraphData(document.getElementById("groupBy").value);
     } else {
-        table.style.display = "block";
+        table.style.display = "table";
         page.style.display = "block";
         graph.style.display = "none";
         graphOptions.style.display = "none";
@@ -187,7 +187,7 @@ async function fetchGraphData() {
 
         // ✅ Update x-axis time scale dynamically
         window.chartInstance.options.scales.x.time.unit = timeUnit;
-        
+
         // ✅ Update y-axis title dynamically based on selected `groupBy`
         window.chartInstance.options.scales.y.title.text = `Count by ${groupBy}`;
         window.chartInstance.update();
