@@ -28,12 +28,18 @@ document.getElementById("toggleView").addEventListener("change", function () {
     let graph = document.getElementById("logChart");
     let graphOptions = document.getElementById("graphOptions");
     let anonToggler = document.getElementById("container");
+    let header = document.getElementById("header")
+    let settings = document.getElementById("settings")
+    
     if (this.checked) {
         table.style.display = "none";
         page.style.display = "none";
         graph.style.display = "block";
         graphOptions.style.display = "block";
         anonToggler.style.display = "none";
+        header.style.backgroundColor = "#d8315b";
+        settings.style.backgroundColor = "#d8315b";
+
         
         // ✅ Refresh graph when toggling
         fetchGraphData(document.getElementById("groupBy").value);
@@ -43,6 +49,8 @@ document.getElementById("toggleView").addEventListener("change", function () {
         graph.style.display = "none";
         graphOptions.style.display = "none";
         anonToggler.style.display = "flex";
+        header.style.backgroundColor = "#3e92cc";
+        settings.style.backgroundColor = "#3e92cc";
     }
 });
 
@@ -93,7 +101,7 @@ async function fetchLogs() {
 
     data.data.forEach((log, index) => {
         let localTime = convertUTCtoLocal(log.timestamp, false);
-        let rowColor = index % 2 === 0 ? "white" : "#ced4da"; 
+        let rowColor = index % 2 === 0 ? "white" : "#f7f6fe"; 
 
         let row = `<tr style="background-color: ${rowColor};">
             <td>${localTime}</td> 
@@ -165,10 +173,10 @@ async function fetchGraphData() {
     // ✅ Dynamically set the time unit based on `timeRange`
     let timeUnit;
     if (timeRange === "hour") timeUnit = "hour";  // Last 24 Hours → Hourly
-    else if (timeRange === "day") timeUnit = "day"; // Last 7 Days → Daily
-    else if (timeRange === "week") timeUnit = "week"; // Last 1 Month → Weekly
-    else if (timeRange === "month") timeUnit = "month"; // Last 3 Months → Monthly
-    else if (timeRange === "quarter") timeUnit = "month"; // Last 6 Months → Still Monthly
+    else if (timeRange === "day") timeUnit = "day"; 
+    else if (timeRange === "week") timeUnit = "week"; 
+    else if (timeRange === "month") timeUnit = "month"; 
+    else if (timeRange === "quarter") timeUnit = "month"; 
     else timeUnit = "day"; // Default: Daily
 
     if (window.chartInstance) {
@@ -206,7 +214,7 @@ async function fetchGraphData() {
                 scales: {
                     x: { 
                         type: "time", 
-                        time: { unit: timeUnit } // ✅ Dynamic Time Unit
+                        time: { unit: timeUnit } 
                     },
                     y: { title: { display: true, text: `Count by ${groupBy}` } }
                 }
