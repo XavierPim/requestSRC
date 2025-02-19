@@ -10,12 +10,12 @@ let currentPage = 1;
 const limit = 100;
 
 document.addEventListener("DOMContentLoaded", () => {
-    currentSortColumn = localStorage.getItem("sortColumn") 
-        ? parseInt(localStorage.getItem("sortColumn")) 
+    currentSortColumn = localStorage.getItem("sortColumn")
+        ? parseInt(localStorage.getItem("sortColumn"))
         : null;
     currentSortOrder = localStorage.getItem("sortOrder") || "asc";
 
-    fetchLogs(); 
+    fetchLogs();
     setupToggles();
 });
 
@@ -30,7 +30,7 @@ document.getElementById("toggleView").addEventListener("change", function () {
 
     if (this.checked) {
         table.style.display = "none";
-        page.style.display = "none"; 
+        page.style.display = "none";
         graph.style.display = "block";
         graphOptions.style.display = "block";
         // ✅ Refresh graph when toggling
@@ -44,8 +44,8 @@ document.getElementById("toggleView").addEventListener("change", function () {
 });
 
 async function fetchLogs() {
-    let filters = { 
-        limit: 50, 
+    let filters = {
+        limit: 50,
         page: currentPage,
         sortColumn: localStorage.getItem("sortColumn") || null,
         sortOrder: localStorage.getItem("sortOrder") || "desc"
@@ -53,7 +53,7 @@ async function fetchLogs() {
 
     let query = new URLSearchParams(filters).toString();
     let response = await fetch(`${dashboardRoute}/logs?${query}`);
-    
+
     if (!response.ok) return;
 
     let data = await response.json();
@@ -68,20 +68,20 @@ async function fetchLogs() {
         data.data.sort((a, b) => {
             let valA = a[Object.keys(a)[columnIndex]];
             let valB = b[Object.keys(b)[columnIndex]];
-        
+
             if (valA === undefined || valA === null) valA = "";
             if (valB === undefined || valB === null) valB = "";
-        
+
             let numA = parseFloat(valA);
             let numB = parseFloat(valB);
-        
-            if (!isNaN(numA) && !isNaN(numB)) { 
+
+            if (!isNaN(numA) && !isNaN(numB)) {
                 return sortOrder === "asc" ? numA - numB : numB - numA;
             }
-        
+
             valA = String(valA).toLowerCase();
             valB = String(valB).toLowerCase();
-        
+
             return sortOrder === "asc" ? valA.localeCompare(valB) : valB.localeCompare(valA);
         });
 
@@ -97,7 +97,7 @@ async function fetchLogs() {
             <td>${log.city || "Unknown"}</td>
             <td>${log.region || "Unknown"}</td>
             <td>${log.country || "Unknown"}</td>
-            <td>${log.user_agent}</td>
+           <td>${parseUserAgent(log.user_agent)}</td>
             <td>${log.req_type}</td>
         </tr>`;
         tbody.innerHTML += row;
@@ -112,7 +112,7 @@ const colorPalette = [
     "#FF5733", "#33FF57", "#3357FF", "#FF33A1", "#A133FF", "#33FFF5", "#FFC300", "#FF5733",
     "#C70039", "#900C3F", "#581845", "#28A745", "#17A2B8", "#DC3545", "#FFC107"
 ];
-let assignedColors = {}; 
+let assignedColors = {};
 let lastId = 0;
 async function fetchGraphData() {
     let timeRange = document.getElementById("timeRange").value;
@@ -160,7 +160,7 @@ async function fetchGraphData() {
     let ctx = canvas.getContext("2d");
 
     if (window.chartInstance) {
-        let existingLabels = new Set(window.chartInstance.data.datasets.map(ds => ds.label));
+        // let existingLabels = new Set(window.chartInstance.data.datasets.map(ds => ds.label));
 
         datasets.forEach(newDataset => {
             let existingDataset = window.chartInstance.data.datasets.find(ds => ds.label === newDataset.label);
@@ -172,7 +172,7 @@ async function fetchGraphData() {
         });
 
         // ✅ Remove datasets that no longer exist
-        window.chartInstance.data.datasets = window.chartInstance.data.datasets.filter(ds => 
+        window.chartInstance.data.datasets = window.chartInstance.data.datasets.filter(ds =>
             datasets.some(newDs => newDs.label === ds.label)
         );
 
@@ -221,6 +221,47 @@ function convertUTCtoLocal(utcDateString, forChart = false) {
         hour12: true
     });
 }
+/**
+ * ✅ Extracts relevant info from User-Agent, including Insomnia & Postman
+ */
+function parseUserAgent(uaString) {
+    if (!uaString) return "Unknown";
+
+    let browser = "Unknown";
+    let platform = "Unknown";
+    let version = "";
+
+    // ✅ Detect API Clients
+    if (uaString.includes("PostmanRuntime")) return "Postman";
+    if (uaString.includes("insomnia")) return "Insomnia";
+
+    // ✅ Detect Browsers
+    if (uaString.includes("Chrome")) {
+        browser = "Chrome";
+        version = uaString.match(/Chrome\/([\d.]+)/)?.[1] || "";
+    } else if (uaString.includes("Firefox")) {
+        browser = "Firefox";
+        version = uaString.match(/Firefox\/([\d.]+)/)?.[1] || "";
+    } else if (uaString.includes("Safari") && !uaString.includes("Chrome")) {
+        browser = "Safari";
+        version = uaString.match(/Version\/([\d.]+)/)?.[1] || "";
+    } else if (uaString.includes("Edg")) {
+        browser = "Edge";
+        version = uaString.match(/Edg\/([\d.]+)/)?.[1] || "";
+    } else if (uaString.includes("MSIE") || uaString.includes("Trident")) {
+        browser = "IE";
+        version = uaString.match(/(MSIE |rv:)([\d.]+)/)?.[2] || "";
+    }
+
+    // ✅ Detect Platforms
+    if (uaString.includes("Windows")) platform = "Windows";
+    else if (uaString.includes("Mac OS X")) platform = "Mac";
+    else if (uaString.includes("Linux")) platform = "Linux";
+    else if (uaString.includes("Android")) platform = "Android";
+    else if (uaString.includes("iPhone") || uaString.includes("iPad")) platform = "iOS";
+
+    return `${browser} ${version} (${platform})`.trim();
+}
 
 
 async function setupToggles() {
@@ -228,25 +269,27 @@ async function setupToggles() {
     let config = await response.json();
 
     document.getElementById("toggleAnonymize").checked = config.anonymize;
-} 
+}
 
-document.getElementById("toggleAnonymize").addEventListener("change", async function () {
+document.getElementById("toggleAnonymize").addEventListener("change", function () {
     let newConfig = {
-        anonymize: this.checked, // ✅ Toggle IP anonymization dynamically
+        anonymize: this.checked 
     };
 
-    const response = await fetch(`${dashboardRoute}/update-config`, { 
+    fetch(`${dashboardRoute}/update-config`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(newConfig)
-    });
-
-    if (response.ok) {
-        console.log("✅ Settings updated successfully!");
-    } else {
-        console.error("❌ Failed to update settings!");
-    }
+    })
+        .then(response => {
+            if (response.ok) {
+                console.log("✅ Anonymization setting updated successfully!");
+            } else {
+                console.error("❌ Failed to update anonymization setting.");
+            }
+        });
 });
+
 
 
 
@@ -297,10 +340,10 @@ setInterval(() => {
     let graph = document.getElementById("logChart");
 
     if (table.style.display !== "none") {
-        fetchLogs(); 
+        fetchLogs();
     } else if (graph.style.display !== "none") {
-        fetchGraphData(); 
+        fetchGraphData();
     }
-}, 5000); 
+}, 5000);
 
 

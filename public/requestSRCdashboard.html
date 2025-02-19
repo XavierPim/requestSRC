@@ -10,90 +10,84 @@
 </head>
 
 <body>
-
-    <div id="header">
-        <h1>📊 RequestSRC Dashboard</h1>
-        <!-- Toggle Table / Graph -->
-        <div class="checkbox_item citem_3">
-            <h3 class="title">View Mode</h3>
-            <label class="checkbox_wrap">
-                <input type="checkbox" id="toggleView" class="checkbox_inp">
-                <span class="checkbox_mark"></span>
-            </label>
+    <div class="containerBox">
+        <div class="header">
+            <h2>📊 RequestSRC Dashboard</h2>
+            <!-- Toggle Table / Graph -->
+            <div class="checkbox_item citem_3">
+                <h3 class="title">View Mode</h3>
+                <label class="checkbox_wrap">
+                    <input type="checkbox" id="toggleView" class="checkbox_inp">
+                    <span class="checkbox_mark"></span>
+                </label>
+            </div>
         </div>
-    </div>
-    <div class="settings">
+        <div class="settings">
+            <!-- Graph Grouping Options -->
+            <div id="graphOptions">
+                <div style="margin-top: 10px;">
+                    <label>Group By:</label>
+                    <select id="groupBy" onchange="fetchGraphData()">
+                        <option value="req_type">Request Category</option>
+                        <!-- <option value="ip">IP Address</option> -->
+                        <option value="city">City</option>
+                        <option value="region">Region</option>
+                        <option value="country">Country</option>
+                    </select>
+                </div>
 
-
-
-
-        <!-- Graph Grouping Options -->
-        <div id="graphOptions">
-            <div style="margin-top: 10px;">
-                <label>Group By:</label>
-                <select id="groupBy" onchange="fetchGraphData()">
-                    <option value="req_type">Request Category</option>
-                    <!-- <option value="ip">IP Address</option> -->
-                    <option value="city">City</option>
-                    <option value="region">Region</option>
-                    <option value="country">Country</option>
+                <label>Time Range:</label>
+                <select id="timeRange" onchange="fetchGraphData()">
+                    <option value="hour">Last 24 Hours</option>
+                    <option value="day">Last 7 Days</option>
+                    <option value="week">Last 1 Month</option>
+                    <option value="month">Last 3 Months</option>
+                    <option value="quarter">Last 6 Months</option>
                 </select>
             </div>
 
-            <label>Time Range:</label>
-            <select id="timeRange" onchange="fetchGraphData()">
-                <option value="hour">Last 24 Hours</option>
-                <option value="day">Last 7 Days</option>
-                <option value="week">Last 1 Month</option>
-                <option value="month">Last 3 Months</option>
-                <option value="quarter">Last 6 Months</option>
-            </select>
+            <!-- Anonymize Panel -->
+            <label class="container">Anonymize IP
+                <input type="checkbox" id="toggleAnonymize">
+                <span class="checkmark"></span>
+            </label>
+
         </div>
 
-        <!-- Settings Panel -->
 
-        <label>
-            <input type="checkbox" id="toggleAnonymize"> Anonymize IP
-        </label>
-        <button onclick="updateConfig()">Save Settings</button>
-    </div>
+        <!-- Table View -->
+        <table id="logTable">
+            <thead>
+                <tr>
+                    <th onclick="fetchLogsWithSorting(0)">Timestamp <span id="sortIcon0">⬍</span></th>
+                    <th onclick="fetchLogsWithSorting(1)">IP Address <span id="sortIcon1">⬍</span></th>
+                    <th onclick="fetchLogsWithSorting(2)">City <span id="sortIcon2">⬍</span></th>
+                    <th onclick="fetchLogsWithSorting(3)">Region <span id="sortIcon3">⬍</span></th>
+                    <th onclick="fetchLogsWithSorting(4)">Country <span id="sortIcon4">⬍</span></th>
+                    <th onclick="fetchLogsWithSorting(5)">User-Agent <span id="sortIcon5">⬍</span></th>
+                    <th onclick="fetchLogsWithSorting(6)">Type <span id="sortIcon6">⬍</span></th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Log data will be inserted here -->
+            </tbody>
+        </table>
 
-    <!-- Table View -->
-    <table id="logTable">
-        <thead>
-            <tr>
-                <th onclick="fetchLogsWithSorting(0)">Timestamp <span id="sortIcon0">⬍</span></th>
-                <th onclick="fetchLogsWithSorting(1)">IP Address <span id="sortIcon1">⬍</span></th>
-                <th onclick="fetchLogsWithSorting(2)">City <span id="sortIcon2">⬍</span></th>
-                <th onclick="fetchLogsWithSorting(3)">Region <span id="sortIcon3">⬍</span></th>
-                <th onclick="fetchLogsWithSorting(4)">Country <span id="sortIcon4">⬍</span></th>
-                <th onclick="fetchLogsWithSorting(5)">User-Agent <span id="sortIcon5">⬍</span></th>
-                <th onclick="fetchLogsWithSorting(6)">Type <span id="sortIcon6">⬍</span></th>
-            </tr>
-        </thead>
-        <tbody>
-            <!-- Log data will be inserted here -->
-        </tbody>
-    </table>
+        <!-- Graph View (Hidden by Default) -->
+        <canvas id="logChart" style="display:none; width:100%; max-height:400px;"></canvas>
 
-    <!-- Graph View (Hidden by Default) -->
-    <canvas id="logChart" style="display:none; width:100%; max-height:400px;"></canvas>
+        <!-- Pagination controls -->
+        <div id="pageButtons">
+            <button onclick="prevPage()">⬅️ Previous</button>
+            <button onclick="nextPage()">➡️ Next</button>
+            <span id="currentPageDisplay">Page: 1</span>
+        </div>
 
-    <!-- Pagination controls -->
-    <div id="pageButtons">
-        <button onclick="prevPage()">⬅️ Previous</button>
-        <button onclick="nextPage()">➡️ Next</button>
-        <span id="currentPageDisplay">Page: 1</span>
     </div>
 
     <script src="./script.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
 
-    <script>
-        document.addEventListener("DOMContentLoaded", () => {
-            anonToggle();
-        });
-    </script>
 </body>
 
 </html>

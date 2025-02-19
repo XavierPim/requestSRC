@@ -199,7 +199,7 @@ this.router.get(`${this.config.dashboardRoute}/logs`, async (req, res) => {
     }
 });
 
-const activeFilters = {}; // ✅ Global filter storage per user
+const activeFilters = {}; 
 
 this.router.get(`${this.config.dashboardRoute}/chart-data`, async (req, res) => {
     let { lastId = "0", timeRange = "hour", groupBy = "req_type", filterValue } = req.query;

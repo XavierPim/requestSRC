@@ -12,7 +12,7 @@ app.use(requestSRC.router);
 
 // ✅ Update RequestSRC configuration dynamically
 requestSRC.updateConfig({
-    anonymize: true, // Enable anonymization
+    anonymize: false, // Enable anonymization
     dashboardRoute: "/custom", // Custom dashboard route
     retentionPeriod: 30, // Keep logs for 30 days
 });
