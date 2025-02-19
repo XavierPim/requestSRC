@@ -65,6 +65,7 @@ document.getElementById("toggleView").addEventListener("change", function () {
 
 
 async function fetchLogs() {
+    return new Promise(async (resolve) => {
     let filters = {
         limit: 50,
         page: currentPage,
@@ -105,7 +106,6 @@ async function fetchLogs() {
 
             return sortOrder === "asc" ? valA.localeCompare(valB) : valB.localeCompare(valA);
         });
-
         updateSortIcons(); 
     }
 
@@ -141,6 +141,8 @@ async function fetchLogs() {
     });
 
     document.getElementById("currentPageDisplay").innerText = `Page: ${currentPage}`;
+    resolve();
+});
 }
 
 
@@ -155,6 +157,7 @@ const colorPalette = [
 let assignedColors = {};
 let lastId = 0;
 async function fetchGraphData() {
+    return new Promise(async (resolve) => {
     let timeRange = document.getElementById("timeRange").value;
     let groupBy = document.getElementById("groupBy").value;
 
@@ -249,6 +252,8 @@ async function fetchGraphData() {
             }
         });
     }
+    resolve();
+});
 }
 
 
@@ -393,12 +398,26 @@ function updateSortIcons() {
 setInterval(() => {
     let table = document.getElementById("logTable");
     let graph = document.getElementById("logChart");
+    let refreshIcon = document.getElementById("refreshIcon");
+
+    // ✅ Change ⟳ to a spinning version when refreshing
+    refreshIcon.classList.add("refreshing");
+
+    let fetchPromises = [];
 
     if (table.style.display !== "none") {
-        fetchLogs();
+        fetchPromises.push(fetchLogs());
     } else if (graph.style.display !== "none") {
-        fetchGraphData();
+        fetchPromises.push(fetchGraphData());
     }
+
+    // ✅ Revert back to static ⟳ after refresh completes
+    Promise.all(fetchPromises).then(() => {
+        setTimeout(() => {
+            refreshIcon.classList.remove("refreshing");
+        }, 500);
+    });
+
 }, 5000);
 
 

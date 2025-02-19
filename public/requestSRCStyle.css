@@ -19,7 +19,6 @@ body {
     background-repeat: repeat-y;
     background-position: center;
     background-size: cover;
-
     width: 100%;
     min-height: 100vh;
 }
@@ -34,6 +33,30 @@ body {
     margin-top: 10px;
     transition: width 0.3s ease-in-out, background-color 0.3s;
 }
+/* Ensure the refresh icon stays in place */
+.refresh-icon {
+    display: inline-block;
+    width: 1.5em; /* Fixed width to prevent movement */
+    text-align: center;
+    transition: opacity 0.2s ease-in-out;
+}
+
+/* Rotation animation when refreshing */
+.refresh-icon.refreshing {
+    animation: spin 1s linear infinite;
+    color:white;
+}
+
+/* Keyframe Animation for Spinning */
+@keyframes spin {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}
+
 
 /* Header expands to full-width in graph mode */
 .graph-mode #header {
