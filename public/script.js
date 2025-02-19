@@ -27,12 +27,14 @@ document.getElementById("toggleView").addEventListener("change", function () {
     let page = document.getElementById("pageButtons");
     let graph = document.getElementById("logChart");
     let graphOptions = document.getElementById("graphOptions");
-
+    let anonToggler = document.getElementById("container");
     if (this.checked) {
         table.style.display = "none";
         page.style.display = "none";
         graph.style.display = "block";
         graphOptions.style.display = "block";
+        anonToggler.style.display = "none";
+        
         // ✅ Refresh graph when toggling
         fetchGraphData(document.getElementById("groupBy").value);
     } else {
@@ -40,6 +42,7 @@ document.getElementById("toggleView").addEventListener("change", function () {
         page.style.display = "block";
         graph.style.display = "none";
         graphOptions.style.display = "none";
+        anonToggler.style.display = "flex";
     }
 });
 
@@ -85,19 +88,20 @@ async function fetchLogs() {
             return sortOrder === "asc" ? valA.localeCompare(valB) : valB.localeCompare(valA);
         });
 
-        updateSortIcons(); // ✅ Keep sorting icons updated
+        updateSortIcons(); 
     }
 
-    data.data.forEach(log => {
+    data.data.forEach((log, index) => {
         let localTime = convertUTCtoLocal(log.timestamp, false);
+        let rowColor = index % 2 === 0 ? "white" : "#ced4da"; 
 
-        let row = `<tr>
+        let row = `<tr style="background-color: ${rowColor};">
             <td>${localTime}</td> 
             <td>${log.ip}</td>
             <td>${log.city || "Unknown"}</td>
             <td>${log.region || "Unknown"}</td>
             <td>${log.country || "Unknown"}</td>
-           <td>${parseUserAgent(log.user_agent)}</td>
+            <td>${parseUserAgent(log.user_agent)}</td>
             <td>${log.req_type}</td>
         </tr>`;
         tbody.innerHTML += row;
@@ -105,6 +109,7 @@ async function fetchLogs() {
 
     document.getElementById("currentPageDisplay").innerText = `Page: ${currentPage}`;
 }
+
 
 
 // ✅ Color palette for assigning colors to request types
@@ -118,7 +123,6 @@ async function fetchGraphData() {
     let timeRange = document.getElementById("timeRange").value;
     let groupBy = document.getElementById("groupBy").value;
 
-    // ✅ Reset `lastId` when switching groupBy to prevent missing data
     if (window.currentGroupBy !== groupBy) {
         lastId = 0;
         window.currentGroupBy = groupBy;
@@ -129,20 +133,19 @@ async function fetchGraphData() {
 
     if (!result || result.data.length === 0) return;
 
-    lastId = result.lastId; // ✅ Track the latest fetched ID
+    lastId = result.lastId;
 
     let groupedData = {};
     let colorIndex = 0;
 
     result.data.forEach(log => {
-        let localTime = convertUTCtoLocal(log.time, true); // ✅ Convert UTC to Local
+        let localTime = convertUTCtoLocal(log.time, true);
         let key = log[groupBy] || "Unknown";
 
         if (!groupedData[key]) groupedData[key] = {};
         if (!groupedData[key][localTime]) groupedData[key][localTime] = 0;
         groupedData[key][localTime] += log.count;
 
-        // ✅ Ensure colors persist across updates
         if (!assignedColors[key]) {
             assignedColors[key] = colorPalette[colorIndex % colorPalette.length];
             colorIndex++;
@@ -151,7 +154,7 @@ async function fetchGraphData() {
 
     let datasets = Object.keys(groupedData).map(key => ({
         label: key,
-        data: Object.entries(groupedData[key]).map(([time, count]) => ({ x: new Date(time), y: count })), // ✅ Use local time
+        data: Object.entries(groupedData[key]).map(([time, count]) => ({ x: new Date(time), y: count })),
         fill: false,
         borderColor: assignedColors[key]
     }));
@@ -159,23 +162,34 @@ async function fetchGraphData() {
     let canvas = document.getElementById("logChart");
     let ctx = canvas.getContext("2d");
 
-    if (window.chartInstance) {
-        // let existingLabels = new Set(window.chartInstance.data.datasets.map(ds => ds.label));
+    // ✅ Dynamically set the time unit based on `timeRange`
+    let timeUnit;
+    if (timeRange === "hour") timeUnit = "hour";  // Last 24 Hours → Hourly
+    else if (timeRange === "day") timeUnit = "day"; // Last 7 Days → Daily
+    else if (timeRange === "week") timeUnit = "week"; // Last 1 Month → Weekly
+    else if (timeRange === "month") timeUnit = "month"; // Last 3 Months → Monthly
+    else if (timeRange === "quarter") timeUnit = "month"; // Last 6 Months → Still Monthly
+    else timeUnit = "day"; // Default: Daily
 
+    if (window.chartInstance) {
         datasets.forEach(newDataset => {
             let existingDataset = window.chartInstance.data.datasets.find(ds => ds.label === newDataset.label);
             if (existingDataset) {
-                existingDataset.data = newDataset.data; // ✅ Only update data points
+                existingDataset.data = newDataset.data;
             } else {
-                window.chartInstance.data.datasets.push(newDataset); // ✅ Add new dataset if missing
+                window.chartInstance.data.datasets.push(newDataset);
             }
         });
 
-        // ✅ Remove datasets that no longer exist
         window.chartInstance.data.datasets = window.chartInstance.data.datasets.filter(ds =>
             datasets.some(newDs => newDs.label === ds.label)
         );
 
+        // ✅ Update x-axis time scale dynamically
+        window.chartInstance.options.scales.x.time.unit = timeUnit;
+        
+        // ✅ Update y-axis title dynamically based on selected `groupBy`
+        window.chartInstance.options.scales.y.title.text = `Count by ${groupBy}`;
         window.chartInstance.update();
     } else {
         window.chartInstance = new Chart(ctx, {
@@ -187,16 +201,20 @@ async function fetchGraphData() {
                 hover: { animationDuration: 0 },
                 responsiveAnimationDuration: 0,
                 plugins: {
-                    legend: { display: true }, // ✅ Ensure Chart.js legend is active
+                    legend: { display: true },
                 },
                 scales: {
-                    x: { type: "time" },
+                    x: { 
+                        type: "time", 
+                        time: { unit: timeUnit } // ✅ Dynamic Time Unit
+                    },
                     y: { title: { display: true, text: `Count by ${groupBy}` } }
                 }
             }
         });
     }
 }
+
 
 /**
  * ✅ Convert UTC timestamp to local time and remove seconds
@@ -260,7 +278,8 @@ function parseUserAgent(uaString) {
     else if (uaString.includes("Android")) platform = "Android";
     else if (uaString.includes("iPhone") || uaString.includes("iPad")) platform = "iOS";
 
-    return `${browser} ${version} (${platform})`.trim();
+    // return `${browser} ${version} (${platform})`.trim(); //this is if you want to show version
+    return `${browser} (${platform})`.trim();
 }
 
 
@@ -316,7 +335,7 @@ function fetchLogsWithSorting(columnIndex) {
     localStorage.setItem("sortColumn", columnIndex);
     localStorage.setItem("sortOrder", currentSortOrder);
 
-    fetchLogs(); // ✅ Fetch logs again with updated sorting
+    fetchLogs(); 
 }
 
 
@@ -329,7 +348,7 @@ function updateSortIcons() {
     if (currentSortColumn !== null) {
         let icon = document.getElementById(`sortIcon${currentSortColumn}`);
         if (icon) {
-            icon.innerText = currentSortOrder === "asc" ? "⬆️" : "⬇️";
+            icon.innerText = currentSortOrder === "asc" ? "▲" : "▼";
         }
     }
 }

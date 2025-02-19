@@ -24,8 +24,8 @@ body {
 .header{
 display: flex;
 justify-content: space-around;
-padding: 10px;
 width: 80%;
+padding-top: 10px;
 }
 
 .title{
@@ -58,26 +58,33 @@ button {
     justify-content: space-around;
     align-items: center;
     margin: 10px auto;
-    width: 30%;
+    min-width: 30%;
     background: white;
     padding: 10px;
     border-radius: 10px;
     box-shadow: 0px 0px 10px #aaa;
 }
-
 #graphOptions{
     display: none;
+    margin: 0;
+}
+
+.graphFilter {
+    text-align: left;
+    padding:3px 0px;
+    margin: 0 10px;
 }
 
 table {
     width: 100%;
+    height: 100dvh;
     margin: 0;
     border-collapse: collapse;
     background: white;
 }
 
 th, td {
-    font-size: 0.9em;
+    font-size: 0.8em;
     padding: 5px;
     border: 1px solid #ddd;
 }
@@ -102,17 +109,17 @@ margin:20px;
 
 /* toggle anonymize logic */
 /* Style the container */
-.container {
+#container {
     display: flex;
     position: relative;
     padding-left: 50px;
     cursor: pointer;
-    font-size: 18px;
     user-select: none;
+    font-size: 1em;
 }
 
 /* Hide the default checkbox */
-.container input {
+#container input {
     position: absolute;
     opacity: 0;
     cursor: pointer;
@@ -144,12 +151,12 @@ margin:20px;
 }
 
 /* Toggle on state */
-.container input:checked ~ .checkmark {
+#container input:checked ~ .checkmark {
     background-color: #34bfa3; /* Green for active */
 }
 
 /* Move toggle circle when checked */
-.container input:checked ~ .checkmark:after {
+#container input:checked ~ .checkmark:after {
     transform: translateX(16px);
 }
 
@@ -168,7 +175,7 @@ margin:20px;
     display: block;
     cursor: pointer;
     width: 100px;
-    margin: 0 auto 50px;
+    margin: 0 auto 10px;
 }
 
 /* Hide the default checkbox */
@@ -210,7 +217,7 @@ margin:20px;
 
 /* Default view: Table */
 .checkbox_item .checkbox_wrap .checkbox_mark:before {
-    content: "→Graph";
+    content: "►Graph";
     color:#007bff;
     background: #ffffff;
 }
@@ -220,7 +227,7 @@ margin:20px;
 
 /* Active view: Graph */
 .checkbox_item .checkbox_wrap .checkbox_mark:after {
-    content: "←Table";
+    content: "◄Table";
     left: -100px;
     background: #3579f6;
 }

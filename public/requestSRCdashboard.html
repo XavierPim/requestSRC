@@ -25,7 +25,7 @@
         <div class="settings">
             <!-- Graph Grouping Options -->
             <div id="graphOptions">
-                <div style="margin-top: 10px;">
+                <div class="graphFilter">
                     <label>Group By:</label>
                     <select id="groupBy" onchange="fetchGraphData()">
                         <option value="req_type">Request Category</option>
@@ -36,18 +36,20 @@
                     </select>
                 </div>
 
-                <label>Time Range:</label>
-                <select id="timeRange" onchange="fetchGraphData()">
-                    <option value="hour">Last 24 Hours</option>
-                    <option value="day">Last 7 Days</option>
-                    <option value="week">Last 1 Month</option>
-                    <option value="month">Last 3 Months</option>
-                    <option value="quarter">Last 6 Months</option>
-                </select>
+                <div class="graphFilter">
+                    <label>Time Range:</label>
+                    <select id="timeRange" onchange="fetchGraphData()">
+                        <option value="hour">Last 24 Hours</option>
+                        <option value="day">Last 7 Days</option>
+                        <option value="week">Last 1 Month</option>
+                        <option value="month">Last 3 Months</option>
+                        <option value="quarter">Last 6 Months</option>
+                    </select>
+                </div>
             </div>
 
             <!-- Anonymize Panel -->
-            <label class="container">Anonymize IP
+            <label id="container">Anonymize IP
                 <input type="checkbox" id="toggleAnonymize">
                 <span class="checkmark"></span>
             </label>
