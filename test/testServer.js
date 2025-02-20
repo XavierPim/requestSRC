@@ -1,5 +1,5 @@
 const express = require('express');
-const requestSRC = require('./middleware/requestSRC');
+const requestSRC = require('../lib/requestSRC');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
