@@ -59,13 +59,13 @@
         <table id="logTable">
             <thead>
                 <tr>
-                    <th onclick="fetchLogsWithSorting(0)">Timestamp <span id="sortIcon0">⬍</span></th>
-                    <th onclick="fetchLogsWithSorting(1)">IP Address <span id="sortIcon1">⬍</span></th>
-                    <th onclick="fetchLogsWithSorting(2)">City <span id="sortIcon2">⬍</span></th>
-                    <th onclick="fetchLogsWithSorting(3)">Region <span id="sortIcon3">⬍</span></th>
-                    <th onclick="fetchLogsWithSorting(4)">Country <span id="sortIcon4">⬍</span></th>
-                    <th onclick="fetchLogsWithSorting(5)">User-Agent <span id="sortIcon5">⬍</span></th>
-                    <th onclick="fetchLogsWithSorting(6)">Type <span id="sortIcon6">⬍</span></th>
+                    <th onclick="fetchLogsWithSorting(0)">Timestamp <span id="sortIcon0"></span></th>
+                    <th onclick="fetchLogsWithSorting(1)">IP Address <span id="sortIcon1"></span></th>
+                    <th onclick="fetchLogsWithSorting(2)">City <span id="sortIcon2"></span></th>
+                    <th onclick="fetchLogsWithSorting(3)">Region <span id="sortIcon3"></span></th>
+                    <th onclick="fetchLogsWithSorting(4)">Country <span id="sortIcon4"></span></th>
+                    <th onclick="fetchLogsWithSorting(5)">User-Agent <span id="sortIcon5"></span></th>
+                    <th onclick="fetchLogsWithSorting(6)">Type <span id="sortIcon6"></span></th>
                 </tr>
             </thead>
             <tbody>
@@ -75,7 +75,10 @@
 
         <!-- Graph View (Hidden by Default) -->
         <canvas id="logChart" style="display:none;"></canvas>
-
+        <div id="noDataMessage" style="display: none; text-align: center; font-size: 1.2em; color: gray;">
+            📉 No requests received in the past 24 hours or database not initialized.
+        </div>
+        
         <!-- Pagination controls -->
         <div id="pageButtons">
             <button onclick="prevPage()">◄ Previous</button>

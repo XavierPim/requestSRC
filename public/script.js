@@ -146,9 +146,6 @@ async function fetchLogs() {
 }
 
 
-
-
-
 // ✅ Color palette for assigning colors to request types
 const colorPalette = [
     "#FF5733", "#33FF57", "#3357FF", "#FF33A1", "#A133FF", "#33FFF5", "#FFC300", "#FF5733",
@@ -158,102 +155,104 @@ let assignedColors = {};
 let lastId = 0;
 async function fetchGraphData() {
     return new Promise(async (resolve) => {
-    let timeRange = document.getElementById("timeRange").value;
-    let groupBy = document.getElementById("groupBy").value;
+        let timeRange = document.getElementById("timeRange").value;
+        let groupBy = document.getElementById("groupBy").value;
 
-    if (window.currentGroupBy !== groupBy) {
-        lastId = 0;
-        window.currentGroupBy = groupBy;
-    }
-
-    let response = await fetch(`${dashboardRoute}/chart-data?lastId=${lastId}&timeRange=${timeRange}&groupBy=${groupBy}`);
-    let result = await response.json();
-
-    if (!result || result.data.length === 0) return;
-
-    lastId = result.lastId;
-
-    let groupedData = {};
-    let colorIndex = 0;
-
-    result.data.forEach(log => {
-        let localTime = convertUTCtoLocal(log.time, true);
-        let key = log[groupBy] || "Unknown";
-
-        if (!groupedData[key]) groupedData[key] = {};
-        if (!groupedData[key][localTime]) groupedData[key][localTime] = 0;
-        groupedData[key][localTime] += log.count;
-
-        if (!assignedColors[key]) {
-            assignedColors[key] = colorPalette[colorIndex % colorPalette.length];
-            colorIndex++;
+        if (window.currentGroupBy !== groupBy) {
+            lastId = 0;
+            window.currentGroupBy = groupBy;
         }
-    });
 
-    let datasets = Object.keys(groupedData).map(key => ({
-        label: key,
-        data: Object.entries(groupedData[key]).map(([time, count]) => ({ x: new Date(time), y: count })),
-        fill: false,
-        borderColor: assignedColors[key]
-    }));
+        let response = await fetch(`${dashboardRoute}/chart-data?lastId=${lastId}&timeRange=${timeRange}&groupBy=${groupBy}`);
+        let result = await response.json();
 
-    let canvas = document.getElementById("logChart");
-    let ctx = canvas.getContext("2d");
+        let noDataMessage = document.getElementById("noDataMessage");
+        let graph = document.getElementById("logChart");
 
-    // ✅ Dynamically set the time unit based on `timeRange`
-    let timeUnit;
-    if (timeRange === "hour") timeUnit = "hour";  // Last 24 Hours → Hourly
-    else if (timeRange === "day") timeUnit = "day"; 
-    else if (timeRange === "week") timeUnit = "week"; 
-    else if (timeRange === "month") timeUnit = "month"; 
-    else if (timeRange === "quarter") timeUnit = "month"; 
-    else timeUnit = "day"; // Default: Daily
+        // ✅ Handle No Data Scenario
+        if (!result || result.data.length === 0) {
+            noDataMessage.style.display = "block";  // Show "No Data" message
+            graph.style.display = "none";  // Hide the graph
+            resolve();  // Still resolve the promise
+            return;
+        } else {
+            noDataMessage.style.display = "none";  // Hide the message
+            graph.style.display = "block";  // Show the graph
+        }
 
-    if (window.chartInstance) {
-        datasets.forEach(newDataset => {
-            let existingDataset = window.chartInstance.data.datasets.find(ds => ds.label === newDataset.label);
-            if (existingDataset) {
-                existingDataset.data = newDataset.data;
-            } else {
-                window.chartInstance.data.datasets.push(newDataset);
+        lastId = result.lastId;
+
+        let groupedData = {};
+        let colorIndex = 0;
+
+        result.data.forEach(log => {
+            let localTime = convertUTCtoLocal(log.time, true);
+            let key = log[groupBy] || "Unknown";
+
+            if (!groupedData[key]) groupedData[key] = {};
+            if (!groupedData[key][localTime]) groupedData[key][localTime] = 0;
+            groupedData[key][localTime] += log.count;
+
+            if (!assignedColors[key]) {
+                assignedColors[key] = colorPalette[colorIndex % colorPalette.length];
+                colorIndex++;
             }
         });
 
-        window.chartInstance.data.datasets = window.chartInstance.data.datasets.filter(ds =>
-            datasets.some(newDs => newDs.label === ds.label)
-        );
+        let datasets = Object.keys(groupedData).map(key => ({
+            label: key,
+            data: Object.entries(groupedData[key]).map(([time, count]) => ({ x: new Date(time), y: count })),
+            fill: false,
+            borderColor: assignedColors[key]
+        }));
 
-        // ✅ Update x-axis time scale dynamically
-        window.chartInstance.options.scales.x.time.unit = timeUnit;
+        let canvas = document.getElementById("logChart");
+        let ctx = canvas.getContext("2d");
 
-        // ✅ Update y-axis title dynamically based on selected `groupBy`
-        window.chartInstance.options.scales.y.title.text = `Count by ${groupBy}`;
-        window.chartInstance.update();
-    } else {
-        window.chartInstance = new Chart(ctx, {
-            type: "line",
-            data: { datasets },
-            options: {
-                responsive: true,
-                maintainAspectRatio:  true,
-                animation: false,
-                hover: { animationDuration: 0 },
-                responsiveAnimationDuration: 0,
-                plugins: {
-                    legend: { display: true },
-                },
-                scales: {
-                    x: { 
-                        type: "time", 
-                        time: { unit: timeUnit } 
-                    },
-                    y: { title: { display: true, text: `Count by ${groupBy}` } }
+        // ✅ Dynamically set the time unit based on `timeRange`
+        let timeUnit;
+        if (timeRange === "hour") timeUnit = "hour";  
+        else if (timeRange === "day") timeUnit = "day"; 
+        else if (timeRange === "week") timeUnit = "week"; 
+        else if (timeRange === "month") timeUnit = "month"; 
+        else if (timeRange === "quarter") timeUnit = "month"; 
+        else timeUnit = "day"; 
+
+        if (window.chartInstance) {
+            datasets.forEach(newDataset => {
+                let existingDataset = window.chartInstance.data.datasets.find(ds => ds.label === newDataset.label);
+                if (existingDataset) {
+                    existingDataset.data = newDataset.data;
+                } else {
+                    window.chartInstance.data.datasets.push(newDataset);
                 }
-            }
-        });
-    }
-    resolve();
-});
+            });
+
+            window.chartInstance.data.datasets = window.chartInstance.data.datasets.filter(ds =>
+                datasets.some(newDs => newDs.label === ds.label)
+            );
+
+            window.chartInstance.options.scales.x.time.unit = timeUnit;
+            window.chartInstance.options.scales.y.title.text = `Count by ${groupBy}`;
+            window.chartInstance.update();
+        } else {
+            window.chartInstance = new Chart(ctx, {
+                type: "line",
+                data: { datasets },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    animation: false,
+                    plugins: { legend: { display: true } },
+                    scales: {
+                        x: { type: "time", time: { unit: timeUnit } },
+                        y: { title: { display: true, text: `Count by ${groupBy}` } }
+                    }
+                }
+            });
+        }
+        resolve();
+    });
 }
 
 
