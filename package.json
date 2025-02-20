@@ -1,10 +1,9 @@
 {
   "name": "request-src",
   "version": "1.0.0",
-  "description": "A lightweight server-side middleware for real-time monitoring of HTTP requests.",
-  "main": "index.js",
+  "description": "A lightweight server-side middleware for real-time monitoring  and storage of HTTP requests.",
+  "main": "lib/requestSRC.js",
   "scripts": {
-    "start": "node index.js",
     "test": "mocha"
   },
   "keywords": [
@@ -33,5 +32,11 @@
   "repository": {
     "type": "git",
     "url": "https://github.com/XavierPim/requestSRC"
-  }
+  },
+  "files": [  
+    "lib/",
+    "public/",
+    "data/",
+    "README.md"
+  ]
 }

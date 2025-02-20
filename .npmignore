@@ -1,0 +1,16 @@
+# Ignore node modules and environment files
+node_modules/
+.env
+
+# Ignore logs
+logs/
+
+# Ignore test files
+test/
+
+# Ignore git-related files
+.git/
+.gitignore
+
+# Ignore npmignore itself
+.npmignore
