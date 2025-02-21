@@ -23,7 +23,7 @@ app.get('/', (req, res) => {
     requestSRC.add(req, 'kekek'); // Log the request and add to database
     
     //normal code
-    res.send('Test server is running with RequestSRC!');
+    res.send('Test add log');
 });
 
 // Example route using requestSRC.add()
@@ -31,7 +31,7 @@ app.get('/other', (req, res) => {
     requestSRC.add(req, 'youKnow'); // Log the request and add to database
     
     //normal code
-    res.send();
+    res.send('Test add other log');
 });
 
 // Example route using requestSRC.log()
