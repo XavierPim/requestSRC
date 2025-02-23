@@ -290,11 +290,34 @@ function parseUserAgent(uaString) {
     let version = "";
 
     // ✅ Detect API Clients
+    if (uaString.includes("curl")) {
+        browser = "curl";
+        version = uaString.match(/curl\/([\d.]+)/)?.[1] || "";
+        return `${browser} ${version}`.trim();
+    }
+    if (uaString.includes("Wget")) {
+        browser = "Wget";
+        version = uaString.match(/Wget\/([\d.]+)/)?.[1] || "";
+        return `${browser} ${version}`.trim();
+    }
+    if (uaString.includes("HTTPie")) {
+        browser = "HTTPie";
+        version = uaString.match(/HTTPie\/([\d.]+)/)?.[1] || "";
+        return `${browser} ${version}`.trim();
+    }
+    if (uaString.includes("python-requests")) {
+        browser = "python-requests";
+        version = uaString.match(/python-requests\/([\d.]+)/)?.[1] || "";
+        return `${browser} ${version}`.trim();
+    }
     if (uaString.includes("PostmanRuntime")) return "Postman";
     if (uaString.includes("insomnia")) return "Insomnia";
 
     // ✅ Detect Browsers
-    if (uaString.includes("Chrome")) {
+    if (uaString.includes("Edg")) {
+        browser = "Edge";
+        version = uaString.match(/Edg\/([\d.]+)/)?.[1] || "";
+    } else if (uaString.includes("Chrome")) {
         browser = "Chrome";
         version = uaString.match(/Chrome\/([\d.]+)/)?.[1] || "";
     } else if (uaString.includes("Firefox")) {
@@ -303,9 +326,6 @@ function parseUserAgent(uaString) {
     } else if (uaString.includes("Safari") && !uaString.includes("Chrome")) {
         browser = "Safari";
         version = uaString.match(/Version\/([\d.]+)/)?.[1] || "";
-    } else if (uaString.includes("Edg")) {
-        browser = "Edge";
-        version = uaString.match(/Edg\/([\d.]+)/)?.[1] || "";
     } else if (uaString.includes("MSIE") || uaString.includes("Trident")) {
         browser = "IE";
         version = uaString.match(/(MSIE |rv:)([\d.]+)/)?.[2] || "";
