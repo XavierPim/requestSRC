@@ -1,6 +1,6 @@
 {
   "name": "request-src",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "description": "A lightweight server-side middleware for real-time monitoring  and storage of HTTP requests.",
   "main": "lib/requestSRC.js",
   "scripts": {
