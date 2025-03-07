@@ -13,25 +13,16 @@ app.use(requestSRC.router);
 // ✅ Update RequestSRC configuration dynamically
 requestSRC.updateConfig({
     anonymize: false, // Enable anonymization
-    dashboardRoute: "/custom", // Custom dashboard route
+    dashboardRoute: "/customUserDefinedRoute", // Custom dashboard route
     retentionPeriod: 30, // Keep logs for 30 days
 });
 
-
 // Example route using requestSRC.add()
 app.get('/', (req, res) => {
-    requestSRC.add(req, 'kekek'); // Log the request and add to database
+    requestSRC.add(req, 'loginPage'); // Log the request and add to database
     
-    //normal code
+    //normal logic below
     res.send('Test add log');
-});
-
-// Example route using requestSRC.add()
-app.get('/other', (req, res) => {
-    requestSRC.add(req, 'youKnow'); // Log the request and add to database
-    
-    //normal code
-    res.send('Test add other log');
 });
 
 // Example route using requestSRC.log()
@@ -44,8 +35,6 @@ app.get('/log', async (req, res) => {
         res.status(500).json({ error: "Failed to log request" });
     }
 });
-
-
 
 app.listen(PORT, () => {
     console.log(`Server online`);

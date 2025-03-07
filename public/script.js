@@ -370,8 +370,6 @@ document.getElementById("toggleAnonymize").addEventListener("change", function (
 });
 
 
-
-
 function nextPage() {
     currentPage++;
     fetchLogs();
