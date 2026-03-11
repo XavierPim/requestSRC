@@ -22,7 +22,6 @@
     "express": "^4.21.2",
     "geoip-lite": "^1.4.7",
     "maxmind": "^4.3.24",
-    "mysql2": "^3.6.1",
     "pg": "^8.11.1"
   },
   "devDependencies": {

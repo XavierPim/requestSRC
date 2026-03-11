@@ -11,30 +11,30 @@
 
 ## Features
 
-✔️ **Automatic Request Logging**: Captures IP address, geolocation, user agent, timestamp, and custom request type.  
-✔️ **Built-in Admin Dashboard**: Sortable table and filterable graph to analyze logs.  
-✔️ **Database Support**: Stores logs in **PostgreSQL** or **MySQL**.  
-✔️ **Privacy-Friendly**: IP anonymization available for **GDPR**/**CCPA** compliance.  
-✔️ **Customizable**:  
+- **Automatic Request Logging**: Captures IP address, geolocation, user agent, timestamp, and custom request type.  
+- **Built-in Admin Dashboard**: Sortable table and filterable graph to analyze logs.  
+- **Database Support**: Stores logs in **PostgreSQL** (current release).  
+- **Privacy-Friendly**: IP anonymization available for **GDPR**/**CCPA** compliance.  
+- **Customizable**:  
 - Anonymization options,  
 - Dashboard route,  
 - Log retention period,  
 - Data refresh rate (WIP),  
 - Data expiration (WIP).
 
-✔️ **Graph Filtering**:  
+- **Graph Filtering**:  
 - Filter graph data by IP, city, region, country, or request type.  
 - Visual differentiation of request types via color-coded lines matching the log entries.  
 
-✔️ **Advanced User-Agent Detection**:  
+- **Advanced User-Agent Detection**:  
 - Identifies whether requests are local, public, or through port forwarding.  
 - Highlights anomalies or suspicious access patterns.
 
-✔️ **Log Customization**:  
+- **Log Customization**:  
 - Anonymize logs,  
 - Color-coded request types for easy identification.
 
-✔️ **Plug-and-Play Setup**:  
+- **Plug-and-Play Setup**:  
 - After PostgreSQL installation and setup, the integration is seamless.
 
 ---
@@ -61,11 +61,13 @@ const RequestSRC = require("request-src");
 
 const app = express();
 
-// ✅ Update RequestSRC configuration dynamically
+//  Update RequestSRC configuration dynamically
 RequestSRC.updateConfig({
     anonymize: false, // Enable anonymization
     dashboardRoute: "/custom", // Custom dashboard route
     retentionPeriod: 30, // Keep logs for 30 days
+    dashboardToken: "replace-with-a-secret", // Optional dashboard/API protection
+    resolveLocalIpWithPublicLookup: false, // Optional public-IP lookup for local addresses
 });
 
 // Use the middleware
@@ -105,7 +107,7 @@ app.get("/log", async (req, res) => {
 
 ### `requestSRC.add(req, reqType)`
 
-📌 **Logs request metadata into the database.**  
+**Logs request metadata into the database.**  
 - Extracts **IP**, **user-agent**, **timestamp**, and **geolocation**.  
 - Stores the request in the SQL database.  
 - **Example Usage:**
@@ -120,7 +122,7 @@ app.post("/register", (req, res) => {
 
 ### `requestSRC.log(req, reqType)`
 
-📌 **Extracts request metadata without storing it.**  
+**Extracts request metadata without storing it.**  
 - Returns an object with request details for debugging.  
 - **Example Usage:**
 ```javascript
@@ -157,6 +159,8 @@ When initializing `RequestSRC`, you can configure:
 | `anonymize`       | Boolean  | Masks last octet of IP (default: `false`).                |
 | `dashboardRoute`  | String   | URL path for admin dashboard (default: `/requestSRC`).    |
 | `retentionPeriod` | Number   | Auto-delete logs older than X days (`0` = disable).       |
+| `dashboardToken`  | String   | Optional token required for dashboard UI/API access.       |
+| `resolveLocalIpWithPublicLookup` | Boolean | If true, local/private IPs can be replaced with detected public IP (default: `false`). |
 
 ---
 
@@ -167,6 +171,9 @@ Once installed, the **traffic monitoring dashboard** is available at:
 ```
 http://your-domain/requestSRC
 ```
+
+For local/internal use, keep this route private.  
+If you set `dashboardToken`, include it using an `Authorization: Bearer <token>` header, `x-dashboard-token`, or `?dashboardToken=<token>` query parameter.
 
 It provides:
 - A sortable table view for traffic logs.  
@@ -218,7 +225,7 @@ To fully utilize **RequestSRC** with persistent log storage, you'll need to inst
 
 1. **Install PostgreSQL:**  
    Follow the official guide to install PostgreSQL based on your operating system:  
-   👉 [PostgreSQL Download](https://www.postgresql.org/download/)
+    [PostgreSQL Download](https://www.postgresql.org/download/)
 
 2. **Create a Database:**  
    After installation, create a new database for logging:
@@ -286,11 +293,13 @@ require('dotenv').config();
 
 const app = express();
 
-// ✅ Update RequestSRC configuration dynamically
+//  Update RequestSRC configuration dynamically
 RequestSRC.updateConfig({
     anonymize: false, // Enable anonymization
     dashboardRoute: "/requestSRC", // Dashboard route
     retentionPeriod: 30, // Retain logs for 30 days
+    dashboardToken: "replace-with-a-secret", // Optional dashboard/API protection
+    resolveLocalIpWithPublicLookup: false, // Optional public-IP lookup for local addresses
 });
 
 // Use the middleware
@@ -314,7 +323,7 @@ http://localhost:3000/requestSRC
 
 ## License
 
-MIT License © 2025 Xavier Pimentel
+MIT License (c) 2025 Xavier Pimentel
 
 ---
 
@@ -322,4 +331,7 @@ MIT License © 2025 Xavier Pimentel
 
 Feel free to submit **issues**, **feature requests**, or **pull requests** on GitHub.
 
-🔗 **GitHub Repository:** [https://github.com/XavierPim/requestSRC](https://github.com/XavierPim/requestSRC)
+**GitHub Repository:** [https://github.com/XavierPim/requestSRC](https://github.com/XavierPim/requestSRC)
+
+
+

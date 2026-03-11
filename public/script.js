@@ -1,440 +1,503 @@
-// ✅ Get the base route dynamically & clean it
-let dashboardRoute = window.location.pathname.replace(/\/$/, ""); // Remove trailing slash if any
+let dashboardRoute = window.location.pathname.replace(/\/$/, '');
 
-// Sorting variables
-let currentSortColumn = null;
-let currentSortOrder = "asc";
-
-// Pagination variables
-let currentPage = 1;
-const limit = 100;
-
-document.addEventListener("DOMContentLoaded", () => {
-    currentSortColumn = localStorage.getItem("sortColumn")
-        ? parseInt(localStorage.getItem("sortColumn"))
-        : null;
-    currentSortOrder = localStorage.getItem("sortOrder") || "asc";
-
-    fetchLogs();
-    setupToggles();
-});
-
-
-
-// ✅ Fetch graph data when switching to graph mode
-document.getElementById("toggleView").addEventListener("change", function () {
-    let table = document.getElementById("logTable");
-    let page = document.getElementById("pageButtons");
-    let graph = document.getElementById("logChart");
-    let graphOptions = document.getElementById("graphOptions");
-    let anonToggler = document.getElementById("container");
-    let header = document.getElementById("header");
-    let settings = document.getElementById("settings");
-    let body = document.body; // ✅ Use body to apply mode-based styles
-
-    if (this.checked) {
-        table.style.display = "none";
-        page.style.display = "none";
-        graph.style.display = "block";
-        graphOptions.style.display = "block";
-        anonToggler.style.display = "none";
-        header.style.padding = "0";
-        header.style.margin = "0";
-        header.style.width = "100%";
-        settings.style.backgroundColor = "#d8315b";
-        
-        // ✅ Apply graph mode styling
-        body.classList.add("graph-mode");
-        
-        // ✅ Refresh chart data
-        fetchGraphData(document.getElementById("groupBy").value);
-    } else {
-        table.style.display = "table";
-        page.style.display = "block";
-        graph.style.display = "none";
-        graphOptions.style.display = "none";
-        anonToggler.style.display = "flex";
-        header.style.width = "90%";
-        
-        settings.style.backgroundColor = "#3e92cc";
-        
-        // ✅ Remove graph mode styling
-        body.classList.remove("graph-mode");
-    }
-});
-
-
-async function fetchLogs() {
-    return new Promise(async (resolve) => {
-    let filters = {
-        limit: 50,
-        page: currentPage,
-        sortColumn: localStorage.getItem("sortColumn") || null,
-        sortOrder: localStorage.getItem("sortOrder") || "desc"
-    };
-
-    let query = new URLSearchParams(filters).toString();
-    let response = await fetch(`${dashboardRoute}/logs?${query}`);
-
-    if (!response.ok) return;
-
-    let data = await response.json();
-    let tbody = document.querySelector("#logTable tbody");
-    tbody.innerHTML = ""; // ✅ Clear only current page data
-
-    // ✅ Apply sorting before rendering
-    if (filters.sortColumn !== null) {
-        let columnIndex = parseInt(filters.sortColumn);
-        let sortOrder = filters.sortOrder;
-
-        data.data.sort((a, b) => {
-            let valA = a[Object.keys(a)[columnIndex]];
-            let valB = b[Object.keys(b)[columnIndex]];
-
-            if (valA === undefined || valA === null) valA = "";
-            if (valB === undefined || valB === null) valB = "";
-
-            let numA = parseFloat(valA);
-            let numB = parseFloat(valB);
-
-            if (!isNaN(numA) && !isNaN(numB)) {
-                return sortOrder === "asc" ? numA - numB : numB - numA;
-            }
-
-            valA = String(valA).toLowerCase();
-            valB = String(valB).toLowerCase();
-
-            return sortOrder === "asc" ? valA.localeCompare(valB) : valB.localeCompare(valA);
-        });
-        updateSortIcons(); 
-    }
-
-    // ✅ Assign colors to request types (shared with graph)
-    data.data.forEach((log, index) => {
-        let localTime = convertUTCtoLocal(log.timestamp, false);
-        let rowColor = index % 2 === 0 ? "white" : "#f7f6fe";
-
-        let reqType = log.req_type || "Unknown";
-
-        // ✅ Reuse assignedColors from graph
-        if (!assignedColors[reqType]) {
-            assignedColors[reqType] = colorPalette[Object.keys(assignedColors).length % colorPalette.length];
-        }
-
-        // ✅ Generate a lighter version of the color
-        let baseColor = assignedColors[reqType];
-        let lightColor = `${baseColor}30`; // Adds 30% transparency
-
-        let row = `<tr style="background-color: ${rowColor};">
-            <td>${localTime}</td> 
-            <td>${log.ip}</td>
-            <td>${log.city || "Unknown"}</td>
-            <td>${log.region || "Unknown"}</td>
-            <td>${log.country || "Unknown"}</td>
-            <td>${parseUserAgent(log.user_agent)}</td>
-            <td>
-                <span class="req-badge" style="background-color: ${lightColor}; color: ${baseColor};">${reqType}</span>
-            </td>
-        </tr>`;
-
-        tbody.innerHTML += row;
-    });
-
-    document.getElementById("currentPageDisplay").innerText = `Page: ${currentPage}`;
-    resolve();
-});
-}
-
-
-// ✅ Color palette for assigning colors to request types
+const SORT_FIELDS = ['timestamp', 'ip', 'city', 'region', 'country', 'user_agent', 'req_type'];
+const PAGE_SIZE = 50;
 const colorPalette = [
-    "#FF5733", "#33FF57", "#3357FF", "#FF33A1", "#A133FF", "#33FFF5", "#FFC300", "#FF5733",
-    "#C70039", "#900C3F", "#581845", "#28A745", "#17A2B8", "#DC3545", "#FFC107"
+    '#FF5733', '#33FF57', '#3357FF', '#FF33A1', '#A133FF', '#33FFF5', '#FFC300', '#FF5733',
+    '#C70039', '#900C3F', '#581845', '#28A745', '#17A2B8', '#DC3545', '#FFC107'
 ];
+
+let currentSortColumn = null;
+let currentSortOrder = 'desc';
+let currentPage = 1;
+let paginationState = {
+    totalLogs: 0,
+    totalPages: 1,
+    hasPrevPage: false,
+    hasNextPage: false
+};
+
 let assignedColors = {};
-let lastId = 0;
-async function fetchGraphData() {
-    return new Promise(async (resolve) => {
-        let timeRange = document.getElementById("timeRange").value;
-        let groupBy = document.getElementById("groupBy").value;
+let chartInstance = null;
+let tableRefreshInFlight = false;
+let graphRefreshInFlight = false;
 
-        if (window.currentGroupBy !== groupBy) {
-            lastId = 0;
-            window.currentGroupBy = groupBy;
-        }
+function getSortField() {
+    if (currentSortColumn === null) return null;
+    return SORT_FIELDS[currentSortColumn] || null;
+}
 
-        let response = await fetch(`${dashboardRoute}/chart-data?lastId=${lastId}&timeRange=${timeRange}&groupBy=${groupBy}`);
-        let result = await response.json();
+function resolveTimeUnit(timeRange) {
+    if (timeRange === 'hour') return 'hour';
+    if (timeRange === 'day') return 'day';
+    if (timeRange === 'week') return 'week';
+    if (timeRange === 'month') return 'month';
+    if (timeRange === 'quarter') return 'month';
+    return 'day';
+}
 
-        let noDataMessage = document.getElementById("noDataMessage");
-        let graph = document.getElementById("logChart");
+function formatGraphBucketLabel(dateValue, timeRange) {
+    const date = new Date(dateValue);
+    if (Number.isNaN(date.getTime())) {
+        return null;
+    }
 
-        // ✅ Handle No Data Scenario
-        if (!result || result.data.length === 0) {
-            noDataMessage.style.display = "block";  // Show "No Data" message
-            graph.style.display = "none";  // Hide the graph
-            resolve();  // Still resolve the promise
-            return;
-        } else {
-            noDataMessage.style.display = "none";  // Hide the message
-            graph.style.display = "block";  // Show the graph
-        }
-
-        lastId = result.lastId;
-
-        let groupedData = {};
-        let colorIndex = 0;
-
-        result.data.forEach(log => {
-            let localTime = convertUTCtoLocal(log.time, true);
-            let key = log[groupBy] || "Unknown";
-
-            if (!groupedData[key]) groupedData[key] = {};
-            if (!groupedData[key][localTime]) groupedData[key][localTime] = 0;
-            groupedData[key][localTime] += log.count;
-
-            if (!assignedColors[key]) {
-                assignedColors[key] = colorPalette[colorIndex % colorPalette.length];
-                colorIndex++;
-            }
+    if (timeRange === 'hour') {
+        return date.toLocaleString('en-US', {
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: true
         });
+    }
 
-        let datasets = Object.keys(groupedData).map(key => ({
-            label: key,
-            data: Object.entries(groupedData[key]).map(([time, count]) => ({ x: new Date(time), y: count })),
-            fill: false,
-            borderColor: assignedColors[key]
-        }));
-
-        let canvas = document.getElementById("logChart");
-        let ctx = canvas.getContext("2d");
-
-        // ✅ Dynamically set the time unit based on `timeRange`
-        let timeUnit;
-        if (timeRange === "hour") timeUnit = "hour";  
-        else if (timeRange === "day") timeUnit = "day"; 
-        else if (timeRange === "week") timeUnit = "week"; 
-        else if (timeRange === "month") timeUnit = "month"; 
-        else if (timeRange === "quarter") timeUnit = "month"; 
-        else timeUnit = "day"; 
-
-        if (window.chartInstance) {
-            datasets.forEach(newDataset => {
-                let existingDataset = window.chartInstance.data.datasets.find(ds => ds.label === newDataset.label);
-                if (existingDataset) {
-                    existingDataset.data = newDataset.data;
-                } else {
-                    window.chartInstance.data.datasets.push(newDataset);
-                }
-            });
-
-            window.chartInstance.data.datasets = window.chartInstance.data.datasets.filter(ds =>
-                datasets.some(newDs => newDs.label === ds.label)
-            );
-
-            window.chartInstance.options.scales.x.time.unit = timeUnit;
-            window.chartInstance.options.scales.y.title.text = `Count by ${groupBy}`;
-            window.chartInstance.update();
-        } else {
-            window.chartInstance = new Chart(ctx, {
-                type: "line",
-                data: { datasets },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: true,
-                    animation: false,
-                    plugins: { legend: { display: true } },
-                    scales: {
-                        x: { type: "time", time: { unit: timeUnit } },
-                        y: { title: { display: true, text: `Count by ${groupBy}` } }
-                    }
-                }
-            });
-        }
-        resolve();
+    return date.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
     });
 }
 
-
-/**
- * ✅ Convert UTC timestamp to local time and remove seconds
- */
-function convertUTCtoLocal(utcDateString, forChart = false) {
-    let utcDate = new Date(utcDateString);
-    if (isNaN(utcDate)) return null; // Prevent invalid dates
-
-    let userOffset = utcDate.getTimezoneOffset() * 60000;
-    let localDate = new Date(utcDate.getTime() - userOffset);
-
-    // ✅ If used for a graph, return a Date object (needed for Chart.js)
-    if (forChart) return localDate;
-
-    // ✅ If used for a table, return a formatted string (MM/DD/YYYY HH:mm AM/PM)
-    return localDate.toLocaleString("en-US", {
-        year: "numeric",
-        month: "2-digit",
-        day: "2-digit",
-        hour: "2-digit",
-        minute: "2-digit",
-        hour12: true
-    });
+function ensureColorForKey(key) {
+    if (!assignedColors[key]) {
+        assignedColors[key] = colorPalette[Object.keys(assignedColors).length % colorPalette.length];
+    }
+    return assignedColors[key];
 }
-/**
- * ✅ Extracts relevant info from User-Agent, including Insomnia & Postman
- */
-function parseUserAgent(uaString) {
-    if (!uaString) return "Unknown";
-
-    let browser = "Unknown";
-    let platform = "Unknown";
-    let version = "";
-
-    // ✅ Detect API Clients
-    if (uaString.includes("curl")) {
-        browser = "curl";
-        version = uaString.match(/curl\/([\d.]+)/)?.[1] || "";
-        return `${browser} ${version}`.trim();
-    }
-    if (uaString.includes("Wget")) {
-        browser = "Wget";
-        version = uaString.match(/Wget\/([\d.]+)/)?.[1] || "";
-        return `${browser} ${version}`.trim();
-    }
-    if (uaString.includes("HTTPie")) {
-        browser = "HTTPie";
-        version = uaString.match(/HTTPie\/([\d.]+)/)?.[1] || "";
-        return `${browser} ${version}`.trim();
-    }
-    if (uaString.includes("python-requests")) {
-        browser = "python-requests";
-        version = uaString.match(/python-requests\/([\d.]+)/)?.[1] || "";
-        return `${browser} ${version}`.trim();
-    }
-    if (uaString.includes("PostmanRuntime")) return "Postman";
-    if (uaString.includes("insomnia")) return "Insomnia";
-
-    // ✅ Detect Browsers
-    if (uaString.includes("Edg")) {
-        browser = "Edge";
-        version = uaString.match(/Edg\/([\d.]+)/)?.[1] || "";
-    } else if (uaString.includes("Chrome")) {
-        browser = "Chrome";
-        version = uaString.match(/Chrome\/([\d.]+)/)?.[1] || "";
-    } else if (uaString.includes("Firefox")) {
-        browser = "Firefox";
-        version = uaString.match(/Firefox\/([\d.]+)/)?.[1] || "";
-    } else if (uaString.includes("Safari") && !uaString.includes("Chrome")) {
-        browser = "Safari";
-        version = uaString.match(/Version\/([\d.]+)/)?.[1] || "";
-    } else if (uaString.includes("MSIE") || uaString.includes("Trident")) {
-        browser = "IE";
-        version = uaString.match(/(MSIE |rv:)([\d.]+)/)?.[2] || "";
-    }
-
-    // ✅ Detect Platforms
-    if (uaString.includes("Windows")) platform = "Windows";
-    else if (uaString.includes("Mac OS X")) platform = "Mac";
-    else if (uaString.includes("Linux")) platform = "Linux";
-    else if (uaString.includes("Android")) platform = "Android";
-    else if (uaString.includes("iPhone") || uaString.includes("iPad")) platform = "iOS";
-
-    // return `${browser} ${version} (${platform})`.trim(); //this is if you want to show version
-    return `${browser} (${platform})`.trim();
-}
-
-
-async function setupToggles() {
-    let response = await fetch(`${dashboardRoute}/config`);
-    let config = await response.json();
-
-    document.getElementById("toggleAnonymize").checked = config.anonymize;
-}
-
-document.getElementById("toggleAnonymize").addEventListener("change", function () {
-    let newConfig = {
-        anonymize: this.checked 
-    };
-
-    fetch(`${dashboardRoute}/update-config`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(newConfig)
-    })
-        .then(response => {
-            if (response.ok) {
-                console.log("✅ Anonymization setting updated successfully!");
-            } else {
-                console.error("❌ Failed to update anonymization setting.");
-            }
-        });
-});
-
-
-function nextPage() {
-    currentPage++;
-    fetchLogs();
-}
-
-function prevPage() {
-    if (currentPage > 1) {
-        currentPage--;
-        fetchLogs();
-    }
-}
-
-function fetchLogsWithSorting(columnIndex) {
-    if (currentSortColumn === columnIndex) {
-        currentSortOrder = currentSortOrder === "asc" ? "desc" : "asc";
-    } else {
-        currentSortOrder = "asc";
-    }
-    currentSortColumn = columnIndex;
-
-    localStorage.setItem("sortColumn", columnIndex);
-    localStorage.setItem("sortOrder", currentSortOrder);
-
-    fetchLogs(); 
-}
-
 
 function updateSortIcons() {
-    for (let i = 0; i < 7; i++) {
-        let icon = document.getElementById(`sortIcon${i}`);
-        if (icon) icon.innerText = ""; // Reset all to default
+    for (let i = 0; i < SORT_FIELDS.length; i += 1) {
+        const icon = document.getElementById(`sortIcon${i}`);
+        if (icon) {
+            icon.innerText = '';
+        }
     }
 
     if (currentSortColumn !== null) {
-        let icon = document.getElementById(`sortIcon${currentSortColumn}`);
+        const icon = document.getElementById(`sortIcon${currentSortColumn}`);
         if (icon) {
-            icon.innerText = currentSortOrder === "asc" ? "▲" : "▼";
+            icon.innerText = currentSortOrder === 'asc' ? '▲' : '▼';
         }
     }
 }
 
-// ✅ Automatically refresh only the active views
-setInterval(() => {
-    let table = document.getElementById("logTable");
-    let graph = document.getElementById("logChart");
-    let refreshIcon = document.getElementById("refreshIcon");
+function updatePaginationControls() {
+    const previousButton = document.getElementById('prevPageBtn');
+    const nextButton = document.getElementById('nextPageBtn');
+    const display = document.getElementById('currentPageDisplay');
 
-    // ✅ Change ⟳ to a spinning version when refreshing
-    refreshIcon.classList.add("refreshing");
-
-    let fetchPromises = [];
-
-    if (table.style.display !== "none") {
-        fetchPromises.push(fetchLogs());
-    } else if (graph.style.display !== "none") {
-        fetchPromises.push(fetchGraphData());
+    if (previousButton) {
+        previousButton.disabled = !paginationState.hasPrevPage;
+    }
+    if (nextButton) {
+        nextButton.disabled = !paginationState.hasNextPage;
     }
 
-    // ✅ Revert back to static ⟳ after refresh completes
-    Promise.all(fetchPromises).then(() => {
-        setTimeout(() => {
-            refreshIcon.classList.remove("refreshing");
-        }, 500);
+    if (display) {
+        display.innerText = `Page ${currentPage} of ${paginationState.totalPages} (${paginationState.totalLogs} logs)`;
+    }
+}
+
+function convertUTCtoLocal(utcDateString) {
+    const utcDate = new Date(utcDateString);
+    if (Number.isNaN(utcDate.getTime())) return 'Unknown';
+
+    return utcDate.toLocaleString('en-US', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true
+    });
+}
+
+function parseUserAgent(uaString) {
+    if (!uaString) return 'Unknown';
+
+    let browser = 'Unknown';
+    let platform = 'Unknown';
+    let version = '';
+
+    if (uaString.includes('curl')) {
+        browser = 'curl';
+        version = uaString.match(/curl\/([\d.]+)/)?.[1] || '';
+        return `${browser} ${version}`.trim();
+    }
+    if (uaString.includes('Wget')) {
+        browser = 'Wget';
+        version = uaString.match(/Wget\/([\d.]+)/)?.[1] || '';
+        return `${browser} ${version}`.trim();
+    }
+    if (uaString.includes('HTTPie')) {
+        browser = 'HTTPie';
+        version = uaString.match(/HTTPie\/([\d.]+)/)?.[1] || '';
+        return `${browser} ${version}`.trim();
+    }
+    if (uaString.includes('python-requests')) {
+        browser = 'python-requests';
+        version = uaString.match(/python-requests\/([\d.]+)/)?.[1] || '';
+        return `${browser} ${version}`.trim();
+    }
+    if (uaString.includes('PostmanRuntime')) return 'Postman';
+    if (uaString.includes('insomnia')) return 'Insomnia';
+
+    if (uaString.includes('Edg')) {
+        browser = 'Edge';
+        version = uaString.match(/Edg\/([\d.]+)/)?.[1] || '';
+    } else if (uaString.includes('Chrome')) {
+        browser = 'Chrome';
+        version = uaString.match(/Chrome\/([\d.]+)/)?.[1] || '';
+    } else if (uaString.includes('Firefox')) {
+        browser = 'Firefox';
+        version = uaString.match(/Firefox\/([\d.]+)/)?.[1] || '';
+    } else if (uaString.includes('Safari') && !uaString.includes('Chrome')) {
+        browser = 'Safari';
+        version = uaString.match(/Version\/([\d.]+)/)?.[1] || '';
+    } else if (uaString.includes('MSIE') || uaString.includes('Trident')) {
+        browser = 'IE';
+        version = uaString.match(/(MSIE |rv:)([\d.]+)/)?.[2] || '';
+    }
+
+    if (uaString.includes('Windows')) platform = 'Windows';
+    else if (uaString.includes('Mac OS X')) platform = 'Mac';
+    else if (uaString.includes('Linux')) platform = 'Linux';
+    else if (uaString.includes('Android')) platform = 'Android';
+    else if (uaString.includes('iPhone') || uaString.includes('iPad')) platform = 'iOS';
+
+    return `${browser} (${platform})`.trim();
+}
+
+function renderTableRows(rows) {
+    const tbody = document.querySelector('#logTable tbody');
+    if (!tbody) return;
+
+    if (!Array.isArray(rows) || rows.length === 0) {
+        tbody.innerHTML = '';
+        return;
+    }
+
+    const renderedRows = rows.map((log, index) => {
+        const localTime = convertUTCtoLocal(log.timestamp);
+        const rowColor = index % 2 === 0 ? 'white' : '#f7f6fe';
+        const reqType = log.req_type || 'Unknown';
+        const baseColor = ensureColorForKey(reqType);
+        const lightColor = `${baseColor}30`;
+
+        return `<tr style="background-color: ${rowColor};">
+            <td>${localTime}</td>
+            <td>${log.ip || 'Unknown'}</td>
+            <td>${log.city || 'Unknown'}</td>
+            <td>${log.region || 'Unknown'}</td>
+            <td>${log.country || 'Unknown'}</td>
+            <td>${parseUserAgent(log.user_agent)}</td>
+            <td><span class="req-badge" style="background-color: ${lightColor}; color: ${baseColor};">${reqType}</span></td>
+        </tr>`;
     });
 
-}, 5000);
+    tbody.innerHTML = renderedRows.join('');
+}
 
+async function fetchLogs() {
+    const filters = {
+        limit: PAGE_SIZE,
+        page: currentPage,
+        sortOrder: currentSortOrder
+    };
 
+    const sortField = getSortField();
+    if (sortField) {
+        filters.sortBy = sortField;
+        filters.sortColumn = currentSortColumn;
+    }
+
+    const query = new URLSearchParams(filters).toString();
+    const response = await fetch(`${dashboardRoute}/logs?${query}`);
+    if (!response.ok) {
+        throw new Error('Failed to fetch logs');
+    }
+
+    const payload = await response.json();
+    currentPage = Number.parseInt(payload.page, 10) || 1;
+    paginationState = {
+        totalLogs: Number.parseInt(payload.totalLogs, 10) || 0,
+        totalPages: Number.parseInt(payload.totalPages, 10) || 1,
+        hasPrevPage: Boolean(payload.hasPrevPage),
+        hasNextPage: Boolean(payload.hasNextPage)
+    };
+
+    renderTableRows(payload.data || []);
+    updatePaginationControls();
+    updateSortIcons();
+}
+
+function hideChart() {
+    const noDataMessage = document.getElementById('noDataMessage');
+    const graph = document.getElementById('logChart');
+
+    if (noDataMessage) {
+        noDataMessage.style.display = 'block';
+    }
+    if (graph) {
+        graph.style.display = 'none';
+    }
+
+    if (chartInstance) {
+        chartInstance.destroy();
+        chartInstance = null;
+    }
+}
+
+function showChart() {
+    const noDataMessage = document.getElementById('noDataMessage');
+    const graph = document.getElementById('logChart');
+
+    if (noDataMessage) {
+        noDataMessage.style.display = 'none';
+    }
+    if (graph) {
+        graph.style.display = 'block';
+    }
+}
+
+async function fetchGraphData() {
+    const timeRange = document.getElementById('timeRange')?.value || 'hour';
+    const groupBy = document.getElementById('groupBy')?.value || 'req_type';
+
+    const query = new URLSearchParams({ timeRange, groupBy }).toString();
+    const response = await fetch(`${dashboardRoute}/chart-data?${query}`);
+    if (!response.ok) {
+        throw new Error('Failed to fetch graph data');
+    }
+
+    const result = await response.json();
+    if (!result || !Array.isArray(result.data) || result.data.length === 0) {
+        hideChart();
+        return;
+    }
+
+    const groupedData = {};
+    const labelSet = new Set();
+
+    result.data.forEach((log) => {
+        const key = (log[groupBy] || 'Unknown').toString();
+        const label = formatGraphBucketLabel(log.time, timeRange);
+        if (!label) {
+            return;
+        }
+
+        const count = Number.parseInt(log.count, 10) || 0;
+        if (!groupedData[key]) {
+            groupedData[key] = {};
+        }
+        groupedData[key][label] = (groupedData[key][label] || 0) + count;
+        labelSet.add(label);
+        ensureColorForKey(key);
+    });
+
+    const datasetKeys = Object.keys(groupedData);
+    const labels = Array.from(labelSet);
+
+    if (datasetKeys.length === 0 || labels.length === 0) {
+        hideChart();
+        return;
+    }
+
+    const datasets = datasetKeys.map((key) => ({
+        label: key,
+        data: labels.map((label) => groupedData[key][label] || 0),
+        fill: false,
+        borderColor: assignedColors[key],
+        pointRadius: 3,
+        tension: 0.2
+    }));
+
+    showChart();
+
+    const canvas = document.getElementById('logChart');
+    const ctx = canvas.getContext('2d');
+    const xTitle = timeRange === 'hour' ? 'Time' : 'Date';
+
+    if (chartInstance) {
+        chartInstance.data.labels = labels;
+        chartInstance.data.datasets = datasets;
+        chartInstance.options.scales.x.title.text = xTitle;
+        chartInstance.options.scales.y.title.text = `Count by ${groupBy}`;
+        chartInstance.update('none');
+        return;
+    }
+
+    chartInstance = new Chart(ctx, {
+        type: 'line',
+        data: { labels, datasets },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            animation: false,
+            plugins: { legend: { display: true } },
+            scales: {
+                x: {
+                    type: 'category',
+                    title: { display: true, text: xTitle }
+                },
+                y: { title: { display: true, text: `Count by ${groupBy}` } }
+            }
+        }
+    });
+}
+
+async function setupToggles() {
+    const response = await fetch(`${dashboardRoute}/config`);
+    if (!response.ok) {
+        return;
+    }
+
+    const config = await response.json();
+    const toggle = document.getElementById('toggleAnonymize');
+    if (toggle) {
+        toggle.checked = Boolean(config.anonymize);
+    }
+}
+
+function nextPage() {
+    if (!paginationState.hasNextPage) {
+        return;
+    }
+    currentPage += 1;
+    fetchLogs().catch((error) => console.error(error.message));
+}
+
+function prevPage() {
+    if (!paginationState.hasPrevPage || currentPage <= 1) {
+        return;
+    }
+    currentPage -= 1;
+    fetchLogs().catch((error) => console.error(error.message));
+}
+
+function fetchLogsWithSorting(columnIndex) {
+    if (columnIndex < 0 || columnIndex >= SORT_FIELDS.length) {
+        return;
+    }
+
+    if (currentSortColumn === columnIndex) {
+        currentSortOrder = currentSortOrder === 'asc' ? 'desc' : 'asc';
+    } else {
+        currentSortColumn = columnIndex;
+        currentSortOrder = 'asc';
+    }
+
+    localStorage.setItem('sortColumn', String(currentSortColumn));
+    localStorage.setItem('sortOrder', currentSortOrder);
+
+    currentPage = 1;
+    fetchLogs().catch((error) => console.error(error.message));
+}
+
+function setGraphMode(enabled) {
+    const table = document.getElementById('logTable');
+    const page = document.getElementById('pageButtons');
+    const graph = document.getElementById('logChart');
+    const graphOptions = document.getElementById('graphOptions');
+    const anonToggler = document.getElementById('container');
+    const settings = document.getElementById('settings');
+
+    if (enabled) {
+        table.style.display = 'none';
+        page.style.display = 'none';
+        graph.style.display = 'block';
+        graphOptions.style.display = 'block';
+        anonToggler.style.display = 'none';
+        settings.style.backgroundColor = '#d8315b';
+        document.body.classList.add('graph-mode');
+    } else {
+        table.style.display = 'table';
+        page.style.display = 'block';
+        graph.style.display = 'none';
+        graphOptions.style.display = 'none';
+        anonToggler.style.display = 'flex';
+        settings.style.backgroundColor = '#3e92cc';
+        document.body.classList.remove('graph-mode');
+    }
+}
+
+function startAutoRefresh() {
+    setInterval(() => {
+        const graphMode = Boolean(document.getElementById('toggleView')?.checked);
+        const refreshIcon = document.getElementById('refreshIcon');
+        if (!refreshIcon) {
+            return;
+        }
+
+        const refreshPromises = [];
+
+        if (!graphMode && !tableRefreshInFlight) {
+            tableRefreshInFlight = true;
+            refreshPromises.push(
+                fetchLogs().catch(() => {}).finally(() => {
+                    tableRefreshInFlight = false;
+                })
+            );
+        } else if (graphMode && !graphRefreshInFlight) {
+            graphRefreshInFlight = true;
+            refreshPromises.push(
+                fetchGraphData().catch(() => {}).finally(() => {
+                    graphRefreshInFlight = false;
+                })
+            );
+        }
+
+        if (refreshPromises.length === 0) {
+            return;
+        }
+
+        refreshIcon.classList.add('refreshing');
+        Promise.allSettled(refreshPromises).finally(() => {
+            setTimeout(() => {
+                refreshIcon.classList.remove('refreshing');
+            }, 500);
+        });
+    }, 5000);
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    const storedSortColumn = Number.parseInt(localStorage.getItem('sortColumn'), 10);
+    if (Number.isInteger(storedSortColumn) && storedSortColumn >= 0 && storedSortColumn < SORT_FIELDS.length) {
+        currentSortColumn = storedSortColumn;
+    }
+
+    const storedSortOrder = (localStorage.getItem('sortOrder') || 'desc').toLowerCase();
+    currentSortOrder = storedSortOrder === 'asc' ? 'asc' : 'desc';
+
+    const toggleView = document.getElementById('toggleView');
+    if (toggleView) {
+        toggleView.addEventListener('change', function onToggleView() {
+            setGraphMode(this.checked);
+            if (this.checked) {
+                fetchGraphData().catch((error) => console.error(error.message));
+            } else {
+                fetchLogs().catch((error) => console.error(error.message));
+            }
+        });
+    }
+
+    const toggleAnonymize = document.getElementById('toggleAnonymize');
+    if (toggleAnonymize) {
+        toggleAnonymize.addEventListener('change', function onAnonymizeChange() {
+            const newConfig = { anonymize: this.checked };
+            fetch(`${dashboardRoute}/update-config`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(newConfig)
+            }).catch(() => {});
+        });
+    }
+
+    updateSortIcons();
+    updatePaginationControls();
+
+    fetchLogs().catch((error) => console.error(error.message));
+    setupToggles().catch(() => {});
+    startAutoRefresh();
+});

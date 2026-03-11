@@ -3,7 +3,7 @@ body {
     padding: 0;
     margin: 0;
     width: 100%;
-    height: 100dvh;
+    min-height: 100dvh;
 }
 
 .containerBox {
@@ -11,33 +11,54 @@ body {
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding: 0;
+    padding: 10px 12px 16px;
     margin: 0;
-
     text-align: center;
     background-image: url('./bg.jpg');
     background-repeat: repeat-y;
     background-position: center;
     background-size: cover;
     width: 100%;
-    min-height: 100vh;
+    box-sizing: border-box;
+}
+
+.dashboardShell {
+    width: min(1500px, 94vw);
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+}
+
+#dataContainer {
+    width: 100%;
+    background: rgba(247, 246, 254, 0.98);
+    border-radius: 0 0 10px 10px;
+    box-sizing: border-box;
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
 }
 
 #header {
     display: flex;
     justify-content: space-around;
     align-items: center;
-    width: 90%; /* Table mode width */
+    width: 100%;
     background-color: #3e92cc;
     border-radius: 10px 10px 0 0;
-    margin-top: 10px;
-    transition: width 0.3s ease-in-out, background-color 0.3s;
+    margin-top: 0;
+    transition: background-color 0.3s;
+    box-sizing: border-box;
+    padding: 0 10px;
 }
 /* Ensure the refresh icon stays in place */
 .refresh-icon {
     display: inline-block;
-    width: 1.5em; /* Fixed width to prevent movement */
+    width: 1.5em;
     text-align: center;
+    font-size: 1.1em;
     transition: opacity 0.2s ease-in-out;
 }
 
@@ -58,26 +79,23 @@ body {
 }
 
 
-/* Header expands to full-width in graph mode */
 .graph-mode #header {
-    width: 100%;
-    border-radius: 0; /* No rounding when in graph mode */
-    background-color: #d8315b; /* Change color */
+    background-color: #d8315b;
 }
 
 
 /* Graph styling */
 #logChart {
     display: block;
-    background-color: #f7f6fe;
+    background-color: #ffffff;
     border-radius: 12px; 
-    width: 90%;
-    max-width: 1500px;
+    width: 100%;
+    max-width: 100%;
     max-height: 800px !important; 
     min-height: 300px;
     box-sizing: border-box;
     padding: 10px;
-    margin-top:20px;
+    margin-top: 0;
 }
 
 .title {
@@ -133,7 +151,8 @@ label {
 }
 
 table {
-    max-width: 90%;
+    width: 100%;
+    max-width: 100%;
     margin: 0;
     border-collapse: collapse;
     background: white;
@@ -155,15 +174,32 @@ th {
 
 #logTable,
 #logChart,
-#pageButtons {
+#pageButtons,
+#noDataMessage {
     transition: opacity 0.5s ease-in-out;
     width: 100%;
+}
+
+#noDataMessage {
+    display: none;
+    text-align: center;
+    font-size: 1.1em;
+    color: gray;
+    padding: 20px 0;
+}
+
+#pageButtons {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    flex-wrap: wrap;
 }
 
 
 button {
     padding: 10px 20px;
-    margin: 10px;
+    margin: 0;
     cursor: pointer;
     background: #007BFF;
     color: white;
@@ -231,83 +267,79 @@ button:hover {
 }
 
 
-/* toggle logic table graph
-*/
-/* Skewed toggle switch container */
-.checkbox_item.citem_3 {
-    text-align: center;
+/* view toggle: table/graph segmented control */
+.view-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
-/* Label wrapper for checkbox */
-.checkbox_item .checkbox_wrap {
-    position: relative;
-    display: block;
-    cursor: pointer;
-    width: 80px;
-    margin: 0 auto 0px;
-    padding-top: 10px;
-}
-
-/* Hide the default checkbox */
-.checkbox_item .checkbox_wrap .checkbox_inp {
-    position: absolute;
-    top: 0;
-    left: 0;
-    opacity: 0;
-    z-index: 1;
-}
-
-/* Toggle switch appearance */
-.checkbox_item .checkbox_wrap .checkbox_mark {
-    width: 70px;
-    height: 30px;
-    padding: 2px;
-    border-radius: 0;
-    overflow: hidden;
+.checkbox_wrap {
     position: relative;
     display: inline-block;
+    width: 170px;
+    cursor: pointer;
+    user-select: none;
 }
 
-/* Table view text (default) */
-.checkbox_item .checkbox_wrap .checkbox_mark:before,
-.checkbox_item .checkbox_wrap .checkbox_mark:after {
+.checkbox_inp {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    z-index: 2;
+    margin: 0;
+    cursor: pointer;
+}
+
+.checkbox_mark {
+    position: relative;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    align-items: center;
+    width: 100%;
+    height: 34px;
+    padding: 3px;
+    box-sizing: border-box;
+    border-radius: 999px;
+    background: rgba(18, 52, 77, 0.45);
+    border: 1px solid rgba(255, 255, 255, 0.35);
+}
+
+.checkbox_mark::before {
     content: "";
     position: absolute;
-    transition: all 0.5s ease;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 30px;
-    text-align: center;
-    line-height: 30px;
-    font-size: 12px;
-}
-
-/* Default view: Table */
-.checkbox_item .checkbox_wrap .checkbox_mark:before {
-    content: "►Graph";
-    color: #d8315b;
+    top: 3px;
+    left: 3px;
+    width: calc(50% - 3px);
+    height: calc(100% - 6px);
+    border-radius: 999px;
     background: #ffffff;
-    border-radius: 0 20px 20px 0;
+    transition: transform 0.2s ease;
 }
 
-
-/* Active view: Graph */
-.checkbox_item .checkbox_wrap .checkbox_mark:after {
-    content: "◄Table";
-    color: #ffff;
-    left: -100px;
-    background: #3e92cc;
-    border-radius: 20px 0 0 20px;
-
+.checkbox_inp:checked + .checkbox_mark::before {
+    transform: translateX(100%);
 }
 
-/* Toggle ON state (Graph view) */
-.checkbox_item .checkbox_wrap .checkbox_inp:checked~.checkbox_mark:after {
-    left: 0;
+.toggle-option {
+    position: relative;
+    z-index: 1;
+    text-align: center;
+    font-size: 12px;
+    font-weight: 700;
+    color: rgba(255, 255, 255, 0.82);
+    transition: color 0.2s ease;
 }
 
-/* Hide Table text when switched to Graph */
-.checkbox_item .checkbox_wrap .checkbox_inp:checked~.checkbox_mark:before {
-    left: 100px;
+.checkbox_wrap .checkbox_inp:not(:checked) + .checkbox_mark .toggle-option:first-child {
+    color: #1f5f8a;
+}
+
+.checkbox_wrap .checkbox_inp:checked + .checkbox_mark .toggle-option:last-child {
+    color: #9b1b3f;
+}
+
+.checkbox_inp:focus-visible + .checkbox_mark {
+    outline: 2px solid rgba(255, 255, 255, 0.9);
+    outline-offset: 2px;
 }
