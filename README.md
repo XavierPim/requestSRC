@@ -179,7 +179,15 @@ It provides:
 - A sortable table view for traffic logs.  
 - A graph view to visualize request patterns over time, with color-coded request types.
 - Dummy data controls (`Create Dummy Data` / `Delete Dummy Data`) to quickly simulate graph activity during local testing.
+- Clickable graph legend items to toggle series visibility; hidden series are shown as greyed legend tags.
 
+### Dummy Data Simulation
+
+- `Create Dummy Data` seeds synthetic logs in the `requestsrc_dummy_sim:*` namespace.
+- Seeded data spans a broad time window (`3` to `180` days, default `180`) to make graph trends easier to inspect.
+- Dummy request types are intentionally limited (`login`, `api`, `checkout`) to reduce graph noise.
+- `Delete Dummy Data` removes only rows created by the dummy simulator.
+ 
 ### Dashboard Screenshots
 
 Add your screenshots to `docs/images/` with these filenames:
