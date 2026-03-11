@@ -259,4 +259,41 @@ describe('Dashboard routes', function dashboardRoutes() {
         expect(authUiResponse.headers.get('set-cookie')).to.include('requestsrc_dashboard_token=');
         expect(authConfig).to.not.have.property('dashboardToken');
     });
+
+    it('POST /dummy-data seeds rows using requested count and days', async () => {
+        let captured = null;
+        const originalSeed = requestSRC.seedDummyData;
+        requestSRC.seedDummyData = async ({ count, days }) => {
+            captured = { count, days };
+            return 77;
+        };
+
+        const port = server.address().port;
+        const response = await fetch(`http://127.0.0.1:${port}${DASHBOARD_ROUTE}/dummy-data?count=120&days=10`, {
+            method: 'POST'
+        });
+        const body = await response.json();
+
+        requestSRC.seedDummyData = originalSeed;
+
+        expect(response.status).to.equal(200);
+        expect(captured).to.deep.equal({ count: 120, days: 10 });
+        expect(body).to.deep.equal({ inserted: 77 });
+    });
+
+    it('DELETE /dummy-data removes seeded rows only', async () => {
+        const originalDelete = requestSRC.deleteDummyData;
+        requestSRC.deleteDummyData = async () => 42;
+
+        const port = server.address().port;
+        const response = await fetch(`http://127.0.0.1:${port}${DASHBOARD_ROUTE}/dummy-data`, {
+            method: 'DELETE'
+        });
+        const body = await response.json();
+
+        requestSRC.deleteDummyData = originalDelete;
+
+        expect(response.status).to.equal(200);
+        expect(body).to.deep.equal({ deleted: 42 });
+    });
 });

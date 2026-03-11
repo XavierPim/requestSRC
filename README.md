@@ -178,7 +178,20 @@ If you set `dashboardToken`, include it using an `Authorization: Bearer <token>`
 It provides:
 - A sortable table view for traffic logs.  
 - A graph view to visualize request patterns over time, with color-coded request types.
+- Dummy data controls (`Create Dummy Data` / `Delete Dummy Data`) to quickly simulate graph activity during local testing.
 
+### Dashboard Screenshots
+
+Add your screenshots to `docs/images/` with these filenames:
+
+- `dashboard-graph.png`
+- `dashboard-logs.png`
+
+Then they render in the README:
+
+![RequestSRC Graph View](docs/images/dashboard-graph.png)
+![RequestSRC Logs View](docs/images/dashboard-logs.png)
+ 
 ---
 
 

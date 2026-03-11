@@ -132,4 +132,37 @@ describe('RequestSRC unit behavior', function requestSRCUnit() {
         expect(result.skipped).to.equal(true);
         expect(result.rowCount).to.equal(0);
     });
+
+    it('seedDummyData creates namespaced dummy req_type rows', async () => {
+        const seenReqTypes = [];
+        const allowedSuffixes = new Set(['login', 'api', 'checkout']);
+        database.query = async (sql, params) => {
+            if (/INSERT INTO logs/i.test(sql)) {
+                for (let i = 6; i < params.length; i += 7) {
+                    seenReqTypes.push(params[i]);
+                }
+            }
+            return { rowCount: 0 };
+        };
+
+        const inserted = await requestSRC.seedDummyData({ count: 12, days: 2 });
+        expect(inserted).to.equal(12);
+        expect(seenReqTypes.length).to.equal(12);
+        expect(seenReqTypes.every((value) => value.startsWith('requestsrc_dummy_sim:'))).to.equal(true);
+        expect(
+            seenReqTypes.every((value) => allowedSuffixes.has(value.replace('requestsrc_dummy_sim:', '')))
+        ).to.equal(true);
+    });
+
+    it('deleteDummyData only removes rows matching dummy prefix', async () => {
+        let capturedSql = '';
+        database.query = async (sql) => {
+            capturedSql = sql;
+            return { rowCount: 9 };
+        };
+
+        const deleted = await requestSRC.deleteDummyData();
+        expect(deleted).to.equal(9);
+        expect(capturedSql).to.include("WHERE req_type LIKE 'requestsrc_dummy_sim:%'");
+    });
 });

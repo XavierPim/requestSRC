@@ -21,6 +21,92 @@ let assignedColors = {};
 let chartInstance = null;
 let tableRefreshInFlight = false;
 let graphRefreshInFlight = false;
+const hiddenSeriesByGroup = new Map();
+
+function getHiddenSeriesSet(groupBy) {
+    if (!hiddenSeriesByGroup.has(groupBy)) {
+        hiddenSeriesByGroup.set(groupBy, new Set());
+    }
+    return hiddenSeriesByGroup.get(groupBy);
+}
+
+function buildLegendOptions() {
+    return {
+        display: true,
+        onClick(_event, legendItem, legend) {
+            const chart = legend?.chart;
+            const datasetIndex = legendItem?.datasetIndex;
+            if (!chart || !Number.isInteger(datasetIndex)) {
+                return;
+            }
+
+            const dataset = chart.data?.datasets?.[datasetIndex];
+            const label = dataset?.label;
+            if (typeof label !== 'string') {
+                return;
+            }
+
+            const hiddenSeries = chart.$hiddenSeries instanceof Set ? chart.$hiddenSeries : null;
+            const currentlyVisible = chart.isDatasetVisible(datasetIndex);
+            const nextVisible = !currentlyVisible;
+
+            if (hiddenSeries) {
+                if (nextVisible) {
+                    hiddenSeries.delete(label);
+                } else {
+                    hiddenSeries.add(label);
+                }
+            }
+
+            chart.setDatasetVisibility(datasetIndex, nextVisible);
+            chart.update('none');
+        },
+        onHover(_event, _legendItem, legend) {
+            if (legend?.chart?.canvas) {
+                legend.chart.canvas.style.cursor = 'pointer';
+            }
+        },
+        onLeave(_event, _legendItem, legend) {
+            if (legend?.chart?.canvas) {
+                legend.chart.canvas.style.cursor = 'default';
+            }
+        },
+        labels: {
+            boxWidth: 28,
+            boxHeight: 10,
+            padding: 12,
+            generateLabels(chart) {
+                const baseGenerator = Chart.defaults.plugins.legend.labels.generateLabels;
+                const baseLabels = baseGenerator(chart);
+                const hiddenSeries = chart.$hiddenSeries instanceof Set ? chart.$hiddenSeries : null;
+
+                return baseLabels.map((item) => {
+                    const dataset = chart.data?.datasets?.[item.datasetIndex];
+                    const label = dataset?.label;
+                    const isHidden = hiddenSeries && typeof label === 'string'
+                        ? hiddenSeries.has(label)
+                        : !chart.isDatasetVisible(item.datasetIndex);
+
+                    if (isHidden) {
+                        return {
+                            ...item,
+                            hidden: true,
+                            fillStyle: '#b7bfcb',
+                            strokeStyle: '#b7bfcb',
+                            fontColor: '#8e97a5'
+                        };
+                    }
+
+                    return {
+                        ...item,
+                        hidden: false,
+                        fontColor: '#5f6b7a'
+                    };
+                });
+            }
+        }
+    };
+}
 
 function getSortField() {
     if (currentSortColumn === null) return null;
@@ -264,6 +350,7 @@ function showChart() {
 async function fetchGraphData() {
     const timeRange = document.getElementById('timeRange')?.value || 'hour';
     const groupBy = document.getElementById('groupBy')?.value || 'req_type';
+    const hiddenSeries = getHiddenSeriesSet(groupBy);
 
     const query = new URLSearchParams({ timeRange, groupBy }).toString();
     const response = await fetch(`${dashboardRoute}/chart-data?${query}`);
@@ -309,8 +396,10 @@ async function fetchGraphData() {
         data: labels.map((label) => groupedData[key][label] || 0),
         fill: false,
         borderColor: assignedColors[key],
+        backgroundColor: assignedColors[key],
         pointRadius: 3,
-        tension: 0.2
+        tension: 0.2,
+        hidden: hiddenSeries.has(key)
     }));
 
     showChart();
@@ -320,6 +409,8 @@ async function fetchGraphData() {
     const xTitle = timeRange === 'hour' ? 'Time' : 'Date';
 
     if (chartInstance) {
+        chartInstance.$hiddenSeries = hiddenSeries;
+        chartInstance.$groupBy = groupBy;
         chartInstance.data.labels = labels;
         chartInstance.data.datasets = datasets;
         chartInstance.options.scales.x.title.text = xTitle;
@@ -335,7 +426,9 @@ async function fetchGraphData() {
             responsive: true,
             maintainAspectRatio: true,
             animation: false,
-            plugins: { legend: { display: true } },
+            plugins: {
+                legend: buildLegendOptions()
+            },
             scales: {
                 x: {
                     type: 'category',
@@ -345,6 +438,9 @@ async function fetchGraphData() {
             }
         }
     });
+
+    chartInstance.$hiddenSeries = hiddenSeries;
+    chartInstance.$groupBy = groupBy;
 }
 
 async function setupToggles() {
@@ -358,6 +454,44 @@ async function setupToggles() {
     if (toggle) {
         toggle.checked = Boolean(config.anonymize);
     }
+}
+
+async function refreshActiveView() {
+    const graphMode = Boolean(document.getElementById('toggleView')?.checked);
+    if (graphMode) {
+        await fetchGraphData();
+        return;
+    }
+    await fetchLogs();
+}
+
+async function seedDummyData() {
+    const response = await fetch(`${dashboardRoute}/dummy-data?count=180&days=180`, {
+        method: 'POST'
+    });
+
+    if (!response.ok) {
+        throw new Error('Failed to create dummy data');
+    }
+
+    await refreshActiveView();
+}
+
+async function clearDummyData() {
+    const confirmed = window.confirm('Delete all generated dummy data rows?');
+    if (!confirmed) {
+        return;
+    }
+
+    const response = await fetch(`${dashboardRoute}/dummy-data`, {
+        method: 'DELETE'
+    });
+
+    if (!response.ok) {
+        throw new Error('Failed to delete dummy data');
+    }
+
+    await refreshActiveView();
 }
 
 function nextPage() {
@@ -491,6 +625,20 @@ document.addEventListener('DOMContentLoaded', () => {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(newConfig)
             }).catch(() => {});
+        });
+    }
+
+    const seedDummyBtn = document.getElementById('seedDummyBtn');
+    if (seedDummyBtn) {
+        seedDummyBtn.addEventListener('click', () => {
+            seedDummyData().catch((error) => console.error(error.message));
+        });
+    }
+
+    const clearDummyBtn = document.getElementById('clearDummyBtn');
+    if (clearDummyBtn) {
+        clearDummyBtn.addEventListener('click', () => {
+            clearDummyData().catch((error) => console.error(error.message));
         });
     }
 

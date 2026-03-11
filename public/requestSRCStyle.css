@@ -135,9 +135,11 @@ label {
     display: flex;
     justify-content: space-around;
     align-items: center;
+    flex-wrap: wrap;
     background: #3e92cc;
     padding: 0;
-    color: white
+    color: white;
+    gap: 10px;
 }
 
 #graphOptions {
@@ -148,6 +150,33 @@ label {
 .graphFilter {
     text-align: left;
     margin: 0 5px;
+}
+
+#dummyControls {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.tool-btn {
+    padding: 6px 10px;
+    font-size: 0.72rem;
+    background: rgba(255, 255, 255, 0.14);
+    border: 1px solid rgba(255, 255, 255, 0.35);
+    color: white;
+}
+
+.tool-btn:hover {
+    background: rgba(255, 255, 255, 0.22);
+}
+
+.tool-btn.danger {
+    background: rgba(216, 49, 91, 0.85);
+    border-color: rgba(255, 255, 255, 0.4);
+}
+
+.tool-btn.danger:hover {
+    background: rgba(216, 49, 91, 1);
 }
 
 table {
